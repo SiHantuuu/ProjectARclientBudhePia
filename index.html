@@ -45,11 +45,15 @@
       }
       #ar-scene,
       #vr-scene {
-        display: none;
+        position: absolute;
+        top: 0;
+        left: -9999px; /* Move inactive scenes off-screen */
+        width: 100%;
+        height: 100%;
       }
       #ar-scene.active,
       #vr-scene.active {
-        display: block;
+        left: 0; /* Bring active scene into view */
       }
       #instructions {
         position: fixed;
@@ -289,28 +293,42 @@
 
     <script>
       function switchMode(mode) {
-        const arScene = document.getElementById("ar-scene");
-        const vrScene = document.getElementById("vr-scene");
+        const arSceneEl = document.querySelector("#ar-scene a-scene");
+        const vrSceneEl = document.querySelector("#vr-scene a-scene");
+        const arContainer = document.getElementById("ar-scene");
+        const vrContainer = document.getElementById("vr-scene");
         const arInstruction = document.getElementById("ar-instruction");
         const vrInstruction = document.getElementById("vr-instruction");
         const buttons = document.querySelectorAll(".mode-btn");
 
         // Update tombol aktif
         buttons.forEach((btn) => btn.classList.remove("active"));
-        event.target.classList.add("active");
+        document
+          .querySelector(`.mode-btn[onclick="switchMode('${mode}')"]`)
+          .classList.add("active");
 
         if (mode === "ar") {
-          arScene.classList.add("active");
-          vrScene.classList.remove("active");
+          arContainer.classList.add("active");
+          vrContainer.classList.remove("active");
           arInstruction.style.display = "inline";
           vrInstruction.style.display = "none";
+          arSceneEl.play();
+          vrSceneEl.pause();
         } else {
-          vrScene.classList.add("active");
-          arScene.classList.remove("active");
+          vrContainer.classList.add("active");
+          arContainer.classList.remove("active");
           vrInstruction.style.display = "inline";
           arInstruction.style.display = "none";
+          vrSceneEl.play();
+          arSceneEl.pause();
         }
       }
+
+      // Pastikan scene yang aktif pertama kali juga di-play
+      window.addEventListener("load", () => {
+        document.querySelector("#ar-scene a-scene").play();
+        document.querySelector("#vr-scene a-scene").pause();
+      });
     </script>
   </body>
 </html>
