@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>Mobile AR/VR Demo Test</title>
+    <title>Mobile AR/VR Demo</title>
 
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
@@ -219,7 +219,8 @@
       </div>
 
       <div id="distance-info">
-        Jarak ke objek: <span id="distance-value">-</span> meter
+        Jarak: <span id="distance-value">-</span>m | Pos:
+        <span id="position-value">-</span>
       </div>
 
       <button id="place-button" onclick="placeObject()">
@@ -314,32 +315,35 @@
     </div>
 
     <script>
-      // Custom component untuk world-anchored object
-      AFRAME.registerComponent("world-anchored", {
-        init: function () {
-          // Simpan posisi awal objek di world space
-          this.worldPosition = new THREE.Vector3();
-          this.worldQuaternion = new THREE.Quaternion();
-
-          // Get initial world position
-          this.el.object3D.getWorldPosition(this.worldPosition);
-          this.el.object3D.getWorldQuaternion(this.worldQuaternion);
-
-          // Lepaskan dari parent hierarchy supaya tidak ikut transform camera
-          this.el.object3D.matrixAutoUpdate = false;
-          this.updateMatrix();
+      // CRITICAL: Component untuk BENAR-BENAR anchor objek di world space
+      AFRAME.registerComponent("fixed-in-world", {
+        schema: {
+          x: { type: "number", default: 0 },
+          y: { type: "number", default: 0 },
+          z: { type: "number", default: 0 },
         },
 
-        updateMatrix: function () {
-          // Set posisi absolute di world space
-          this.el.object3D.position.copy(this.worldPosition);
-          this.el.object3D.quaternion.copy(this.worldQuaternion);
-          this.el.object3D.updateMatrix();
+        init: function () {
+          // Simpan posisi ABSOLUTE di world space
+          this.fixedWorldPosition = new THREE.Vector3(
+            this.data.x,
+            this.data.y,
+            this.data.z
+          );
+
+          console.log(
+            "🔒 Object locked at world position:",
+            this.fixedWorldPosition
+          );
+
+          // PENTING: Disconnect dari scene graph hierarchy
+          this.el.object3D.matrixAutoUpdate = false;
         },
 
         tick: function () {
-          // Update setiap frame untuk memastikan objek tetap di posisi world
-          this.updateMatrix();
+          // SETIAP FRAME: Paksa objek stay di posisi absolute world
+          this.el.object3D.position.copy(this.fixedWorldPosition);
+          this.el.object3D.updateMatrix();
         },
       });
 
@@ -348,6 +352,7 @@
       let objectPlaced = false;
       let placedObjects = [];
       let distanceInterval = null;
+      let objectWorldPosition = null;
 
       function placeObject() {
         const scene = document.querySelector("#ar-container a-scene");
@@ -361,11 +366,13 @@
 
         console.log("🎯 Memulai penempatan objek...");
 
-        // Get camera's world position and rotation
+        // Get camera's CURRENT world position and rotation
         const cameraWorldPos = new THREE.Vector3();
         const cameraWorldQuaternion = new THREE.Quaternion();
         camera.object3D.getWorldPosition(cameraWorldPos);
         camera.object3D.getWorldQuaternion(cameraWorldQuaternion);
+
+        console.log("📷 Camera world pos saat ini:", cameraWorldPos);
 
         // Calculate position 3 meters in front of camera
         const direction = new THREE.Vector3(0, 0, -1);
@@ -374,11 +381,15 @@
 
         const targetPosition = new THREE.Vector3();
         targetPosition.copy(cameraWorldPos).add(direction);
+        targetPosition.y = 0; // Ground level
 
-        // Place at ground level based on camera height
-        targetPosition.y = 0;
+        // SIMPAN posisi world absolute
+        objectWorldPosition = targetPosition.clone();
 
-        console.log("📍 Target world position:", targetPosition);
+        console.log(
+          "📍 Object akan ditanam di WORLD POSITION:",
+          objectWorldPosition
+        );
 
         // Remove previous object if repositioning
         if (objectPlaced && placedObjects.length > 0) {
@@ -390,19 +401,18 @@
           }
         }
 
-        // Create new object entity - LANGSUNG DI SCENE, BUKAN DI CAMERA
+        // Create new object entity
         const newObject = document.createElement("a-entity");
         newObject.setAttribute("id", "placed-object-" + placedObjects.length);
 
-        // Set posisi ABSOLUTE di world space
-        newObject.object3D.position.set(
-          targetPosition.x,
-          targetPosition.y,
-          targetPosition.z
-        );
-        newObject.object3D.matrixAutoUpdate = true;
+        // CRITICAL: Set component untuk LOCK posisi di world space
+        newObject.setAttribute("fixed-in-world", {
+          x: objectWorldPosition.x,
+          y: objectWorldPosition.y,
+          z: objectWorldPosition.z,
+        });
 
-        // Create pelampung group dengan scale lebih besar
+        // Create pelampung group
         const pelampungGroup = document.createElement("a-entity");
         pelampungGroup.setAttribute("position", "0 1.5 0");
         pelampungGroup.setAttribute("scale", "2 2 2");
@@ -480,7 +490,7 @@
         newObject.appendChild(box);
         newObject.appendChild(sphere);
 
-        // PENTING: Tambahkan ke SCENE, bukan ke camera!
+        // CRITICAL: Tambahkan LANGSUNG ke scene (bukan camera!)
         scene.appendChild(newObject);
         placedObjects.push(newObject);
 
@@ -490,17 +500,17 @@
         document.getElementById("place-button").innerHTML =
           "🔄 PINDAHKAN OBJEK";
         document.getElementById("info-text").innerHTML =
-          "✅ Objek tertanam! Jalan mengelilinginya untuk lihat dari berbagai sudut";
+          "✅ Objek TERTANAM! Maju/mundur/putar, objek tetap di tempatnya!";
 
         // Show distance tracker
         document.getElementById("distance-info").style.display = "block";
         startDistanceTracking();
 
         console.log(
-          "✅ Objek tertanam di posisi:",
-          targetPosition.x.toFixed(2),
-          targetPosition.y.toFixed(2),
-          targetPosition.z.toFixed(2)
+          "✅ Objek LOCKED di world position:",
+          objectWorldPosition.x.toFixed(2),
+          objectWorldPosition.y.toFixed(2),
+          objectWorldPosition.z.toFixed(2)
         );
       }
 
@@ -508,21 +518,23 @@
         if (distanceInterval) clearInterval(distanceInterval);
 
         distanceInterval = setInterval(() => {
-          if (!objectPlaced || placedObjects.length === 0) return;
+          if (!objectPlaced || !objectWorldPosition) return;
 
           const camera = document.querySelector("#ar-camera");
-          const obj = placedObjects[placedObjects.length - 1];
 
-          if (camera && obj) {
+          if (camera) {
             const cameraPos = new THREE.Vector3();
-            const objPos = new THREE.Vector3();
-
             camera.object3D.getWorldPosition(cameraPos);
-            obj.object3D.getWorldPosition(objPos);
 
-            const distance = cameraPos.distanceTo(objPos);
+            const distance = cameraPos.distanceTo(objectWorldPosition);
+
             document.getElementById("distance-value").textContent =
               distance.toFixed(1);
+            document.getElementById(
+              "position-value"
+            ).textContent = `(${objectWorldPosition.x.toFixed(
+              1
+            )}, ${objectWorldPosition.z.toFixed(1)})`;
           }
         }, 100);
       }
@@ -645,7 +657,7 @@
           const isMobile = isMobileDevice();
           if (isMobile) {
             info.innerHTML =
-              "Mode AR: Arahkan kamera, tekan tombol, lalu JALAN MENGELILINGINYA!";
+              "Mode AR: Letakkan objek, lalu JALAN MAJU/MUNDUR - objek tetap di tempat!";
           } else {
             info.innerHTML = "Mode AR: Arahkan kamera, lalu tekan tombol";
           }
