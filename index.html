@@ -1,142 +1,244 @@
 <!DOCTYPE html>
 <html lang="id">
   <head>
-    <meta charset="utf-8" />
-    <title>Interaktif 3D Model</title>
+    <meta charset="UTF-8" />
+    <title>Museum Virtual Pelampung</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
 
     <style>
-      /* Style untuk Kotak Penjelasan */
-      #info-overlay {
+      /* UI Tombol Maju (Khusus HP) */
+      #mobile-controls {
         position: fixed;
-        bottom: 20px;
+        bottom: 30px;
+        left: 30px;
+        z-index: 999;
+        display: none; /* Otomatis muncul lewat JS deteksi HP */
+      }
+      .move-btn {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.3);
+        border: 2px solid white;
+        border-radius: 50%;
+        color: white;
+        font-size: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+        touch-action: manipulation;
+      }
+      .move-btn:active {
+        background: rgba(0, 255, 0, 0.5);
+      }
+
+      /* UI Penjelasan (Popup Info) */
+      #info-box {
+        position: fixed;
+        top: 50%;
         left: 50%;
-        transform: translateX(-50%);
-        width: 300px;
-        background: rgba(0, 0, 0, 0.85);
+        transform: translate(-50%, -50%);
+        width: 80%;
+        max-width: 400px;
+        background: rgba(0, 0, 0, 0.9);
         color: white;
         padding: 20px;
-        border-radius: 15px;
-        font-family: sans-serif;
-        display: none; /* Sembunyi saat awal */
+        border-radius: 10px;
         border: 2px solid #00d2ff;
-        z-index: 999;
-        box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
+        display: none;
+        z-index: 1000;
+        text-align: center;
+        font-family: sans-serif;
       }
-
-      h3 {
-        margin-top: 0;
-        color: #00d2ff;
-      }
-
       .close-btn {
-        background: #ff4444;
+        margin-top: 15px;
+        padding: 10px 20px;
+        background: #ff0055;
         border: none;
         color: white;
-        padding: 5px 10px;
-        border-radius: 5px;
-        cursor: pointer;
-        float: right;
-        margin-top: -10px;
         font-weight: bold;
+        cursor: pointer;
+        border-radius: 5px;
       }
 
-      #instruction {
+      /* Crosshair (Titik tengah) */
+      #crosshair {
         position: fixed;
-        top: 20px;
-        width: 100%;
-        text-align: center;
-        color: white;
-        font-weight: bold;
+        top: 50%;
+        left: 50%;
+        width: 10px;
+        height: 10px;
+        background: white;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
         pointer-events: none;
-        text-shadow: 1px 1px 2px black;
+        z-index: 900;
+        opacity: 0.7;
+        mix-blend-mode: difference;
       }
     </style>
   </head>
   <body>
-    <div id="info-overlay">
-      <button class="close-btn" onclick="tutupInfo()">X</button>
-      <h3 id="info-title">Judul Objek</h3>
-      <p id="info-desc">
-        Ini adalah penjelasan detail tentang bagian yang kamu klik.
-      </p>
+    <div id="crosshair"></div>
+
+    <div id="mobile-controls">
+      <div class="move-btn" id="btn-forward">⬆️</div>
     </div>
 
-    <div id="instruction">👇 KLIK objek bebek untuk melihat detail</div>
+    <div id="info-box">
+      <h2 id="info-title">Judul</h2>
+      <p id="info-desc">Deskripsi...</p>
+      <button class="close-btn" onclick="tutupInfo()">TUTUP</button>
+    </div>
 
-    <a-scene
-      vr-mode-ui="enabled: false"
-      cursor="rayOrigin: mouse"
-      raycaster="objects: .clickable"
-    >
+    <a-scene renderer="antialias: true" vr-mode-ui="enabled: false">
       <a-assets>
         <a-asset-item
-          id="contoh-glb"
+          id="model-bebek"
           src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb"
         ></a-asset-item>
       </a-assets>
 
       <a-entity
-        environment="preset: starry; groundColor: #1e3f5a; grid: none; lighting: point; skyType: atmosphere; skyColor: #88ccee;"
+        environment="preset: threetowers; skyType: atmosphere; lighting: point; groundColor: #444; grid: 1x1"
       ></a-entity>
-      <a-circle
-        position="0 0.1 0"
-        rotation="-90 0 0"
-        radius="50"
-        color="#006994"
-        material="opacity: 0.8; transparent: true"
-      ></a-circle>
 
       <a-entity
-        id="model-saya"
-        class="clickable"
-        gltf-model="#contoh-glb"
-        scale="1 1 1"
+        id="rig"
+        movement-controls="speed: 0.15; constrainToNavMesh: false"
+        position="0 0 5"
+      >
+        <a-entity
+          camera
+          position="0 1.6 0"
+          look-controls="pointerLockEnabled: true"
+        >
+          <a-entity
+            cursor="fuse: false; rayOrigin: entity"
+            position="0 0 -1"
+            geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+            material="color: black; shader: flat"
+            raycaster="objects: .clickable"
+          >
+          </a-entity>
+        </a-entity>
+      </a-entity>
+
+      <a-box
         position="0 0.5 0"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"
+        color="#333"
+        width="1"
+        height="1"
+        depth="1"
+      ></a-box>
+      <a-entity
+        class="clickable"
+        gltf-model="#model-bebek"
+        position="0 1 0"
+        scale="1 1 1"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 8000; easing: linear"
+        onclick="bukaInfo('Pelampung Bebek', 'Ini adalah contoh model GLB. Bebek ini bisa kamu ganti dengan file pelampung.glb milikmu.')"
       >
       </a-entity>
 
-      <a-entity
-        camera
-        look-controls="enabled: false"
-        orbit-controls="target: 0 0.5 0; minDistance: 2; maxDistance: 6; initialPosition: 0 1 4;"
+      <a-box
+        position="-3 0.5 -2"
+        color="#333"
+        width="1"
+        height="1"
+        depth="1"
+      ></a-box>
+      <a-torus
+        class="clickable"
+        position="-3 1.5 -2"
+        color="orange"
+        radius="0.4"
+        radius-tubular="0.1"
+        animation="property: position; dir: alternate; to: -3 1.7 -2; loop: true; dur: 1000"
+        onclick="bukaInfo('Pelampung Ring', 'Pelampung tipe cincin standar. Biasa digunakan di kolam renang atau kapal kecil.')"
       >
-      </a-entity>
+      </a-torus>
     </a-scene>
 
     <script>
-      // Ambil elemen model dan UI
-      const model = document.querySelector("#model-saya");
-      const infoBox = document.querySelector("#info-overlay");
-      const title = document.querySelector("#info-title");
-      const desc = document.querySelector("#info-desc");
+      // --- LOGIKA KONTROL & UI ---
 
-      // Saat model diklik
-      model.addEventListener("click", function () {
-        // 1. Ubah isinya (Bisa disesuaikan)
-        title.innerText = "Bebek Karet (Contoh)";
-        desc.innerText =
-          "Ini adalah model .glb contoh. Kamu bisa mengganti file ini dengan 'pelampung.glb' buatanmu. Pelampung digunakan untuk keselamatan di laut.";
+      const rig = document.getElementById("rig");
+      const btnForward = document.getElementById("btn-forward");
+      let isWalking = false;
 
-        // 2. Tampilkan kotaknya
-        infoBox.style.display = "block";
+      // 1. Deteksi apakah user di HP atau PC
+      if (
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        )
+      ) {
+        // Jika HP, munculkan tombol maju
+        document.getElementById("mobile-controls").style.display = "block";
+      }
 
-        // 3. Efek visual (sedikit membesar saat diklik biar kerasa)
-        model.setAttribute("scale", "1.2 1.2 1.2");
-        setTimeout(() => {
-          model.setAttribute("scale", "1 1 1");
-        }, 200);
-
-        console.log("Objek diklik!");
+      // 2. Logika Tombol Maju (HP)
+      btnForward.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        isWalking = true;
+      });
+      btnForward.addEventListener("touchend", (e) => {
+        e.preventDefault();
+        isWalking = false;
+      });
+      btnForward.addEventListener("mousedown", () => {
+        isWalking = true;
+      });
+      btnForward.addEventListener("mouseup", () => {
+        isWalking = false;
       });
 
-      // Fungsi tombol tutup
-      function tutupInfo() {
-        infoBox.style.display = "none";
+      // Loop animasi berjalan
+      function walkLoop() {
+        if (isWalking) {
+          // Ambil arah kamera menghadap
+          const cameraEl = document.querySelector("[camera]");
+          const angle = cameraEl.object3D.rotation.y + Math.PI;
+
+          // Gerakkan rig ke depan
+          const speed = 0.05;
+          rig.object3D.position.x += Math.sin(angle) * speed;
+          rig.object3D.position.z += Math.cos(angle) * speed;
+        }
+        requestAnimationFrame(walkLoop);
       }
+      walkLoop();
+
+      // 3. Logika Popup Info
+      const infoBox = document.getElementById("info-box");
+      const titleEl = document.getElementById("info-title");
+      const descEl = document.getElementById("info-desc");
+
+      // Fungsi ini dipanggil dari dalam HTML onclick="..."
+      window.bukaInfo = function (judul, deskripsi) {
+        titleEl.innerText = judul;
+        descEl.innerText = deskripsi;
+        infoBox.style.display = "block";
+      };
+
+      window.tutupInfo = function () {
+        infoBox.style.display = "none";
+      };
+
+      // Listener klik untuk A-Frame (agar support touch & mouse click)
+      document
+        .querySelector("a-scene")
+        .addEventListener("click", function (evt) {
+          // Cek apakah yang diklik punya fungsi onclick custom
+          if (
+            evt.detail.intersectedEl &&
+            evt.detail.intersectedEl.getAttribute("onclick")
+          ) {
+            // Biarkan event onclick HTML berjalan
+          }
+        });
     </script>
   </body>
 </html>
