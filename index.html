@@ -298,21 +298,6 @@
     </div>
 
     <script>
-      AFRAME.registerComponent("world-object", {
-        schema: {
-          worldPosition: { type: "vec3", default: { x: 0, y: 0, z: 0 } },
-        },
-        init: function () {
-          // Object stays at world position regardless of camera movement
-          this.el.object3D.matrixAutoUpdate = true;
-        },
-        tick: function () {
-          // Keep object at its world position
-          const pos = this.data.worldPosition;
-          this.el.object3D.position.set(pos.x, pos.y, pos.z);
-        },
-      });
-
       let currentMode = "ar";
       let arSceneLoaded = false;
       let objectPlaced = false;
@@ -321,12 +306,14 @@
       function placeObject() {
         const scene = document.querySelector("#ar-container a-scene");
         const camera = document.querySelector("#ar-camera");
-        const worldAnchor = document.querySelector("#world-anchor");
 
         if (!camera) {
-          console.error("Camera not found");
+          console.error("❌ Camera not found");
+          alert("Kamera tidak ditemukan. Coba refresh halaman.");
           return;
         }
+
+        console.log("🎯 Memulai penempatan objek...");
 
         // Get camera's world position and rotation
         const cameraWorldPos = new THREE.Vector3();
@@ -334,30 +321,24 @@
         camera.object3D.getWorldPosition(cameraWorldPos);
         camera.object3D.getWorldQuaternion(cameraWorldQuaternion);
 
-        // Calculate position 2.5 meters in front of camera
+        // Calculate position 3 meters in front of camera (lebih jauh agar lebih visible)
         const direction = new THREE.Vector3(0, 0, -1);
         direction.applyQuaternion(cameraWorldQuaternion);
-        direction.multiplyScalar(2.5);
+        direction.multiplyScalar(3);
 
         const targetPosition = new THREE.Vector3();
         targetPosition.copy(cameraWorldPos).add(direction);
 
-        // Place at ground level (y = 0)
-        targetPosition.y = 0;
-
-        // Create object group if not exists
-        let objectGroup = document.getElementById(
-          "placed-object-" + placedObjects.length
-        );
+        // Place slightly above ground level untuk visibility lebih baik
+        targetPosition.y = 0.5;
 
         // Remove previous object if repositioning
-        if (objectPlaced) {
-          const prevObject = document.getElementById(
-            "placed-object-" + (placedObjects.length - 1)
-          );
-          if (prevObject) {
+        if (objectPlaced && placedObjects.length > 0) {
+          const prevObject = placedObjects[placedObjects.length - 1];
+          if (prevObject && prevObject.parentNode) {
             prevObject.parentNode.removeChild(prevObject);
             placedObjects.pop();
+            console.log("🗑️ Objek sebelumnya dihapus");
           }
         }
 
@@ -369,16 +350,17 @@
           `${targetPosition.x} ${targetPosition.y} ${targetPosition.z}`
         );
 
-        // Create pelampung group
+        // Create pelampung group dengan scale lebih besar
         const pelampungGroup = document.createElement("a-entity");
-        pelampungGroup.setAttribute("position", "0 1 0");
+        pelampungGroup.setAttribute("position", "0 1.5 0");
+        pelampungGroup.setAttribute("scale", "2 2 2"); // PENTING: Diperbesar agar lebih terlihat
         pelampungGroup.setAttribute(
           "animation",
           "property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
         );
         pelampungGroup.setAttribute(
           "animation__float",
-          "property: position; to: 0 1.3 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine"
+          "property: position; to: 0 1.8 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine"
         );
 
         // Pelampung torus
@@ -386,6 +368,7 @@
         torus.setAttribute("radius", "0.4");
         torus.setAttribute("radius-tubular", "0.1");
         torus.setAttribute("color", "#ff6b00");
+        torus.setAttribute("material", "shader: flat");
 
         // Tiang
         const pole = document.createElement("a-cylinder");
@@ -393,6 +376,7 @@
         pole.setAttribute("radius", "0.03");
         pole.setAttribute("height", "0.8");
         pole.setAttribute("color", "white");
+        pole.setAttribute("material", "shader: flat");
 
         // Bendera
         const flag = document.createElement("a-plane");
@@ -400,6 +384,7 @@
         flag.setAttribute("width", "0.3");
         flag.setAttribute("height", "0.2");
         flag.setAttribute("color", "red");
+        flag.setAttribute("material", "shader: flat");
 
         // Text
         const text = document.createElement("a-text");
@@ -415,25 +400,27 @@
         pelampungGroup.appendChild(flag);
         pelampungGroup.appendChild(text);
 
-        // Add decorative objects
+        // Add decorative objects dengan ukuran lebih besar
         const box = document.createElement("a-box");
-        box.setAttribute("position", "-1 0.5 0");
-        box.setAttribute("width", "0.3");
-        box.setAttribute("height", "0.3");
-        box.setAttribute("depth", "0.3");
+        box.setAttribute("position", "-1.5 0.8 0");
+        box.setAttribute("width", "0.6");
+        box.setAttribute("height", "0.6");
+        box.setAttribute("depth", "0.6");
         box.setAttribute("color", "#4CC3D9");
+        box.setAttribute("material", "shader: flat");
         box.setAttribute(
           "animation",
           "property: rotation; to: 360 0 360; loop: true; dur: 8000; easing: linear"
         );
 
         const sphere = document.createElement("a-sphere");
-        sphere.setAttribute("position", "1 0.5 0");
-        sphere.setAttribute("radius", "0.2");
+        sphere.setAttribute("position", "1.5 0.8 0");
+        sphere.setAttribute("radius", "0.4");
         sphere.setAttribute("color", "#FFC65D");
+        sphere.setAttribute("material", "shader: flat");
         sphere.setAttribute(
           "animation",
-          "property: position; to: 1 1 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutSine"
+          "property: position; to: 1.5 1.2 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutSine"
         );
 
         // Assemble everything
@@ -447,11 +434,19 @@
 
         objectPlaced = true;
 
+        // Force render update
+        setTimeout(() => {
+          if (newObject.object3D) {
+            newObject.object3D.visible = true;
+            console.log("🔍 Object visibility set to true");
+          }
+        }, 100);
+
         // Update UI
         document.getElementById("place-button").innerHTML =
           "🔄 PINDAHKAN OBJEK";
         document.getElementById("info-text").innerHTML =
-          "Objek sudah diletakkan! Jalan mengelilinginya untuk melihat dari berbagai sudut";
+          "✅ Objek diletakkan! Gerakkan kamera untuk melihat dari berbagai sudut";
 
         console.log(
           "✅ Objek diletakkan di world position:",
