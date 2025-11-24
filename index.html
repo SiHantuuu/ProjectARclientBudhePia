@@ -220,80 +220,29 @@
         "
       >
         <span id="info-text"
-          >Arahkan kamera, lalu tekan tombol untuk meletakkan objek</span
+          >Arahkan kamera ke tempat yang diinginkan, lalu tekan tombol</span
         >
       </div>
     </div>
 
-    <!-- AR Mode: Markerless dengan static positioning -->
+    <!-- AR Mode dengan proper world anchoring -->
     <div id="ar-container" class="scene-container active">
       <a-scene
         embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;"
         vr-mode-ui="enabled: false"
         renderer="logarithmicDepthBuffer: true; precision: medium;"
-        gesture-detector
       >
-        <!-- Objek container yang akan diletakkan -->
-        <a-entity id="object-container" visible="false">
-          <a-entity
-            position="0 0 0"
-            rotation="0 0 0"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
-            animation__float="property: position; to: 0 0.3 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine"
-          >
-            <!-- Pelampung -->
-            <a-torus
-              radius="0.4"
-              radius-tubular="0.1"
-              color="#ff6b00"
-            ></a-torus>
+        <!-- World anchor - objek akan diletakkan sebagai child dari scene, bukan camera -->
+        <a-entity id="world-anchor"></a-entity>
 
-            <!-- Tiang -->
-            <a-cylinder
-              position="0 0.5 0"
-              radius="0.03"
-              height="0.8"
-              color="white"
-            ></a-cylinder>
-
-            <!-- Bendera -->
-            <a-plane
-              position="0.2 0.8 0"
-              width="0.3"
-              height="0.2"
-              color="red"
-            ></a-plane>
-
-            <!-- Text -->
-            <a-text
-              value="PELAMPUNG\nKESELAMATAN"
-              position="-0.6 1.3 0"
-              scale="0.8 0.8 0.8"
-              color="yellow"
-              align="center"
-            ></a-text>
-          </a-entity>
-
-          <!-- Objek tambahan -->
-          <a-box
-            position="-1 0.5 0"
-            width="0.3"
-            height="0.3"
-            depth="0.3"
-            color="#4CC3D9"
-            animation="property: rotation; to: 360 0 360; loop: true; dur: 8000; easing: linear"
-          ></a-box>
-
-          <a-sphere
-            position="1 0.5 0"
-            radius="0.2"
-            color="#FFC65D"
-            animation="property: position; to: 1 1 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutSine"
-          ></a-sphere>
-        </a-entity>
-
-        <a-entity camera look-controls="enabled: true"></a-entity>
+        <!-- Camera dengan look controls -->
+        <a-camera
+          id="ar-camera"
+          position="0 1.6 0"
+          look-controls="enabled: true; touchEnabled: true"
+        >
+        </a-camera>
       </a-scene>
     </div>
 
@@ -349,63 +298,173 @@
     </div>
 
     <script>
-      // Register gesture detector component
-      AFRAME.registerComponent("gesture-detector", {
+      AFRAME.registerComponent("world-object", {
         schema: {
-          element: { default: "" },
+          worldPosition: { type: "vec3", default: { x: 0, y: 0, z: 0 } },
         },
         init: function () {
-          this.targetElement =
-            this.data.element && document.querySelector(this.data.element);
+          // Object stays at world position regardless of camera movement
+          this.el.object3D.matrixAutoUpdate = true;
+        },
+        tick: function () {
+          // Keep object at its world position
+          const pos = this.data.worldPosition;
+          this.el.object3D.position.set(pos.x, pos.y, pos.z);
         },
       });
 
       let currentMode = "ar";
       let arSceneLoaded = false;
       let objectPlaced = false;
+      let placedObjects = [];
 
       function placeObject() {
-        const scene = document.querySelector("a-scene");
-        const camera = scene.querySelector("[camera]");
-        const objectContainer = document.getElementById("object-container");
+        const scene = document.querySelector("#ar-container a-scene");
+        const camera = document.querySelector("#ar-camera");
+        const worldAnchor = document.querySelector("#world-anchor");
 
-        if (!objectPlaced) {
-          // Get camera position and rotation
-          const cameraPosition = camera.getAttribute("position");
-          const cameraRotation = camera.getAttribute("rotation");
-
-          // Calculate position 2 meters in front of camera
-          const distance = 2;
-          const radians = (cameraRotation.y * Math.PI) / 180;
-
-          const newX = cameraPosition.x - Math.sin(radians) * distance;
-          const newZ = cameraPosition.z - Math.cos(radians) * distance;
-
-          // Place object at calculated position
-          objectContainer.setAttribute("position", `${newX} 0 ${newZ}`);
-          objectContainer.setAttribute("visible", "true");
-
-          objectPlaced = true;
-
-          // Update button and info
-          document.getElementById("place-button").innerHTML =
-            "🔄 PINDAHKAN OBJEK";
-          document.getElementById("info-text").innerHTML =
-            "Objek sudah diletakkan! Gerakkan kamera untuk melihat dari berbagai sudut";
-
-          console.log("✅ Objek diletakkan di:", newX, 0, newZ);
-        } else {
-          // Reset and place again
-          objectPlaced = false;
-          objectContainer.setAttribute("visible", "false");
-          document.getElementById("place-button").innerHTML =
-            "📍 LETAKKAN OBJEK";
-          document.getElementById("info-text").innerHTML =
-            "Arahkan kamera, lalu tekan tombol untuk meletakkan objek";
-
-          // Place again
-          setTimeout(() => placeObject(), 100);
+        if (!camera) {
+          console.error("Camera not found");
+          return;
         }
+
+        // Get camera's world position and rotation
+        const cameraWorldPos = new THREE.Vector3();
+        const cameraWorldQuaternion = new THREE.Quaternion();
+        camera.object3D.getWorldPosition(cameraWorldPos);
+        camera.object3D.getWorldQuaternion(cameraWorldQuaternion);
+
+        // Calculate position 2.5 meters in front of camera
+        const direction = new THREE.Vector3(0, 0, -1);
+        direction.applyQuaternion(cameraWorldQuaternion);
+        direction.multiplyScalar(2.5);
+
+        const targetPosition = new THREE.Vector3();
+        targetPosition.copy(cameraWorldPos).add(direction);
+
+        // Place at ground level (y = 0)
+        targetPosition.y = 0;
+
+        // Create object group if not exists
+        let objectGroup = document.getElementById(
+          "placed-object-" + placedObjects.length
+        );
+
+        // Remove previous object if repositioning
+        if (objectPlaced) {
+          const prevObject = document.getElementById(
+            "placed-object-" + (placedObjects.length - 1)
+          );
+          if (prevObject) {
+            prevObject.parentNode.removeChild(prevObject);
+            placedObjects.pop();
+          }
+        }
+
+        // Create new object entity
+        const newObject = document.createElement("a-entity");
+        newObject.setAttribute("id", "placed-object-" + placedObjects.length);
+        newObject.setAttribute(
+          "position",
+          `${targetPosition.x} ${targetPosition.y} ${targetPosition.z}`
+        );
+
+        // Create pelampung group
+        const pelampungGroup = document.createElement("a-entity");
+        pelampungGroup.setAttribute("position", "0 1 0");
+        pelampungGroup.setAttribute(
+          "animation",
+          "property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
+        );
+        pelampungGroup.setAttribute(
+          "animation__float",
+          "property: position; to: 0 1.3 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine"
+        );
+
+        // Pelampung torus
+        const torus = document.createElement("a-torus");
+        torus.setAttribute("radius", "0.4");
+        torus.setAttribute("radius-tubular", "0.1");
+        torus.setAttribute("color", "#ff6b00");
+
+        // Tiang
+        const pole = document.createElement("a-cylinder");
+        pole.setAttribute("position", "0 0.5 0");
+        pole.setAttribute("radius", "0.03");
+        pole.setAttribute("height", "0.8");
+        pole.setAttribute("color", "white");
+
+        // Bendera
+        const flag = document.createElement("a-plane");
+        flag.setAttribute("position", "0.2 0.8 0");
+        flag.setAttribute("width", "0.3");
+        flag.setAttribute("height", "0.2");
+        flag.setAttribute("color", "red");
+
+        // Text
+        const text = document.createElement("a-text");
+        text.setAttribute("value", "PELAMPUNG\nKESELAMATAN");
+        text.setAttribute("position", "-0.6 1.3 0");
+        text.setAttribute("scale", "0.8 0.8 0.8");
+        text.setAttribute("color", "yellow");
+        text.setAttribute("align", "center");
+
+        // Assemble pelampung
+        pelampungGroup.appendChild(torus);
+        pelampungGroup.appendChild(pole);
+        pelampungGroup.appendChild(flag);
+        pelampungGroup.appendChild(text);
+
+        // Add decorative objects
+        const box = document.createElement("a-box");
+        box.setAttribute("position", "-1 0.5 0");
+        box.setAttribute("width", "0.3");
+        box.setAttribute("height", "0.3");
+        box.setAttribute("depth", "0.3");
+        box.setAttribute("color", "#4CC3D9");
+        box.setAttribute(
+          "animation",
+          "property: rotation; to: 360 0 360; loop: true; dur: 8000; easing: linear"
+        );
+
+        const sphere = document.createElement("a-sphere");
+        sphere.setAttribute("position", "1 0.5 0");
+        sphere.setAttribute("radius", "0.2");
+        sphere.setAttribute("color", "#FFC65D");
+        sphere.setAttribute(
+          "animation",
+          "property: position; to: 1 1 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutSine"
+        );
+
+        // Assemble everything
+        newObject.appendChild(pelampungGroup);
+        newObject.appendChild(box);
+        newObject.appendChild(sphere);
+
+        // Add to scene as direct child (not camera child!)
+        scene.appendChild(newObject);
+        placedObjects.push(newObject);
+
+        objectPlaced = true;
+
+        // Update UI
+        document.getElementById("place-button").innerHTML =
+          "🔄 PINDAHKAN OBJEK";
+        document.getElementById("info-text").innerHTML =
+          "Objek sudah diletakkan! Jalan mengelilinginya untuk melihat dari berbagai sudut";
+
+        console.log(
+          "✅ Objek diletakkan di world position:",
+          targetPosition.x.toFixed(2),
+          targetPosition.y.toFixed(2),
+          targetPosition.z.toFixed(2)
+        );
+        console.log(
+          "📍 Camera position:",
+          cameraWorldPos.x.toFixed(2),
+          cameraWorldPos.y.toFixed(2),
+          cameraWorldPos.z.toFixed(2)
+        );
       }
 
       function initExperience() {
@@ -496,7 +555,7 @@
 
         if (!isMobile) {
           info.innerHTML =
-            "Desktop Mode: Arahkan webcam, lalu tekan tombol untuk meletakkan objek";
+            "Desktop Mode: Arahkan webcam ke tempat yang diinginkan";
         }
       }
 
@@ -520,10 +579,10 @@
 
           const isMobile = isMobileDevice();
           if (isMobile) {
-            info.innerHTML = "Mode AR: Tekan tombol untuk meletakkan objek";
-          } else {
             info.innerHTML =
-              "Mode AR: Tekan tombol untuk meletakkan objek di depan kamera";
+              "Mode AR: Arahkan kamera, lalu tekan tombol untuk meletakkan";
+          } else {
+            info.innerHTML = "Mode AR: Arahkan kamera, lalu tekan tombol";
           }
 
           document
