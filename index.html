@@ -177,6 +177,20 @@
       #place-button:active {
         transform: translateX(-50%) scale(0.95);
       }
+
+      #distance-info {
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 15px;
+        font-size: 14px;
+        pointer-events: none;
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -202,6 +216,10 @@
       <div id="mode-selector">
         <button class="mode-btn active" onclick="setMode('ar')">Mode AR</button>
         <button class="mode-btn" onclick="setMode('vr')">Mode VR</button>
+      </div>
+
+      <div id="distance-info">
+        Jarak ke objek: <span id="distance-value">-</span> meter
       </div>
 
       <button id="place-button" onclick="placeObject()">
@@ -233,14 +251,12 @@
         vr-mode-ui="enabled: false"
         renderer="logarithmicDepthBuffer: true; precision: medium;"
       >
-        <!-- World anchor - objek akan diletakkan sebagai child dari scene, bukan camera -->
-        <a-entity id="world-anchor"></a-entity>
-
-        <!-- Camera dengan look controls -->
+        <!-- Camera dengan look controls - TANPA wasd controls -->
         <a-camera
           id="ar-camera"
-          position="0 1.6 0"
+          position="0 0 0"
           look-controls="enabled: true; touchEnabled: true"
+          wasd-controls="enabled: false"
         >
         </a-camera>
       </a-scene>
@@ -298,10 +314,40 @@
     </div>
 
     <script>
+      // Custom component untuk world-anchored object
+      AFRAME.registerComponent("world-anchored", {
+        init: function () {
+          // Simpan posisi awal objek di world space
+          this.worldPosition = new THREE.Vector3();
+          this.worldQuaternion = new THREE.Quaternion();
+
+          // Get initial world position
+          this.el.object3D.getWorldPosition(this.worldPosition);
+          this.el.object3D.getWorldQuaternion(this.worldQuaternion);
+
+          // Lepaskan dari parent hierarchy supaya tidak ikut transform camera
+          this.el.object3D.matrixAutoUpdate = false;
+          this.updateMatrix();
+        },
+
+        updateMatrix: function () {
+          // Set posisi absolute di world space
+          this.el.object3D.position.copy(this.worldPosition);
+          this.el.object3D.quaternion.copy(this.worldQuaternion);
+          this.el.object3D.updateMatrix();
+        },
+
+        tick: function () {
+          // Update setiap frame untuk memastikan objek tetap di posisi world
+          this.updateMatrix();
+        },
+      });
+
       let currentMode = "ar";
       let arSceneLoaded = false;
       let objectPlaced = false;
       let placedObjects = [];
+      let distanceInterval = null;
 
       function placeObject() {
         const scene = document.querySelector("#ar-container a-scene");
@@ -321,7 +367,7 @@
         camera.object3D.getWorldPosition(cameraWorldPos);
         camera.object3D.getWorldQuaternion(cameraWorldQuaternion);
 
-        // Calculate position 3 meters in front of camera (lebih jauh agar lebih visible)
+        // Calculate position 3 meters in front of camera
         const direction = new THREE.Vector3(0, 0, -1);
         direction.applyQuaternion(cameraWorldQuaternion);
         direction.multiplyScalar(3);
@@ -329,8 +375,10 @@
         const targetPosition = new THREE.Vector3();
         targetPosition.copy(cameraWorldPos).add(direction);
 
-        // Place slightly above ground level untuk visibility lebih baik
-        targetPosition.y = 0.5;
+        // Place at ground level based on camera height
+        targetPosition.y = 0;
+
+        console.log("📍 Target world position:", targetPosition);
 
         // Remove previous object if repositioning
         if (objectPlaced && placedObjects.length > 0) {
@@ -342,18 +390,22 @@
           }
         }
 
-        // Create new object entity
+        // Create new object entity - LANGSUNG DI SCENE, BUKAN DI CAMERA
         const newObject = document.createElement("a-entity");
         newObject.setAttribute("id", "placed-object-" + placedObjects.length);
-        newObject.setAttribute(
-          "position",
-          `${targetPosition.x} ${targetPosition.y} ${targetPosition.z}`
+
+        // Set posisi ABSOLUTE di world space
+        newObject.object3D.position.set(
+          targetPosition.x,
+          targetPosition.y,
+          targetPosition.z
         );
+        newObject.object3D.matrixAutoUpdate = true;
 
         // Create pelampung group dengan scale lebih besar
         const pelampungGroup = document.createElement("a-entity");
         pelampungGroup.setAttribute("position", "0 1.5 0");
-        pelampungGroup.setAttribute("scale", "2 2 2"); // PENTING: Diperbesar agar lebih terlihat
+        pelampungGroup.setAttribute("scale", "2 2 2");
         pelampungGroup.setAttribute(
           "animation",
           "property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
@@ -400,7 +452,7 @@
         pelampungGroup.appendChild(flag);
         pelampungGroup.appendChild(text);
 
-        // Add decorative objects dengan ukuran lebih besar
+        // Add decorative objects
         const box = document.createElement("a-box");
         box.setAttribute("position", "-1.5 0.8 0");
         box.setAttribute("width", "0.6");
@@ -428,38 +480,51 @@
         newObject.appendChild(box);
         newObject.appendChild(sphere);
 
-        // Add to scene as direct child (not camera child!)
+        // PENTING: Tambahkan ke SCENE, bukan ke camera!
         scene.appendChild(newObject);
         placedObjects.push(newObject);
 
         objectPlaced = true;
 
-        // Force render update
-        setTimeout(() => {
-          if (newObject.object3D) {
-            newObject.object3D.visible = true;
-            console.log("🔍 Object visibility set to true");
-          }
-        }, 100);
-
         // Update UI
         document.getElementById("place-button").innerHTML =
           "🔄 PINDAHKAN OBJEK";
         document.getElementById("info-text").innerHTML =
-          "✅ Objek diletakkan! Gerakkan kamera untuk melihat dari berbagai sudut";
+          "✅ Objek tertanam! Jalan mengelilinginya untuk lihat dari berbagai sudut";
+
+        // Show distance tracker
+        document.getElementById("distance-info").style.display = "block";
+        startDistanceTracking();
 
         console.log(
-          "✅ Objek diletakkan di world position:",
+          "✅ Objek tertanam di posisi:",
           targetPosition.x.toFixed(2),
           targetPosition.y.toFixed(2),
           targetPosition.z.toFixed(2)
         );
-        console.log(
-          "📍 Camera position:",
-          cameraWorldPos.x.toFixed(2),
-          cameraWorldPos.y.toFixed(2),
-          cameraWorldPos.z.toFixed(2)
-        );
+      }
+
+      function startDistanceTracking() {
+        if (distanceInterval) clearInterval(distanceInterval);
+
+        distanceInterval = setInterval(() => {
+          if (!objectPlaced || placedObjects.length === 0) return;
+
+          const camera = document.querySelector("#ar-camera");
+          const obj = placedObjects[placedObjects.length - 1];
+
+          if (camera && obj) {
+            const cameraPos = new THREE.Vector3();
+            const objPos = new THREE.Vector3();
+
+            camera.object3D.getWorldPosition(cameraPos);
+            obj.object3D.getWorldPosition(objPos);
+
+            const distance = cameraPos.distanceTo(objPos);
+            document.getElementById("distance-value").textContent =
+              distance.toFixed(1);
+          }
+        }, 100);
       }
 
       function initExperience() {
@@ -559,6 +624,7 @@
         const vr = document.getElementById("vr-container");
         const info = document.getElementById("info-text");
         const placeBtn = document.getElementById("place-button");
+        const distanceInfo = document.getElementById("distance-info");
 
         currentMode = mode;
         console.log("🔄 Switch mode ke:", mode);
@@ -571,11 +637,15 @@
           ar.classList.add("active");
           vr.classList.remove("active");
           placeBtn.style.display = "block";
+          if (objectPlaced) {
+            distanceInfo.style.display = "block";
+            startDistanceTracking();
+          }
 
           const isMobile = isMobileDevice();
           if (isMobile) {
             info.innerHTML =
-              "Mode AR: Arahkan kamera, lalu tekan tombol untuk meletakkan";
+              "Mode AR: Arahkan kamera, tekan tombol, lalu JALAN MENGELILINGINYA!";
           } else {
             info.innerHTML = "Mode AR: Arahkan kamera, lalu tekan tombol";
           }
@@ -587,6 +657,8 @@
           vr.classList.add("active");
           ar.classList.remove("active");
           placeBtn.style.display = "none";
+          distanceInfo.style.display = "none";
+          if (distanceInterval) clearInterval(distanceInterval);
           document.getElementById("loading-overlay").style.display = "none";
 
           console.log("🌊 VR Mode aktif");
@@ -613,4 +685,3 @@
     </script>
   </body>
 </html>
-s
