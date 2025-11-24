@@ -155,6 +155,28 @@
         cursor: pointer;
         font-size: 14px;
       }
+
+      #place-button {
+        position: absolute;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 30px;
+        background: #ff6b00;
+        color: white;
+        border: 3px solid white;
+        border-radius: 50px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        pointer-events: auto;
+        box-shadow: 0 4px 20px rgba(255, 107, 0, 0.6);
+        z-index: 2000;
+      }
+
+      #place-button:active {
+        transform: translateX(-50%) scale(0.95);
+      }
     </style>
   </head>
   <body>
@@ -181,6 +203,11 @@
         <button class="mode-btn active" onclick="setMode('ar')">Mode AR</button>
         <button class="mode-btn" onclick="setMode('vr')">Mode VR</button>
       </div>
+
+      <button id="place-button" onclick="placeObject()">
+        📍 LETAKKAN OBJEK
+      </button>
+
       <div
         style="
           position: absolute;
@@ -193,26 +220,27 @@
         "
       >
         <span id="info-text"
-          >Objek pelampung muncul otomatis di depan Anda</span
+          >Arahkan kamera, lalu tekan tombol untuk meletakkan objek</span
         >
       </div>
     </div>
 
-    <!-- AR Mode: Markerless (Tanpa Marker) -->
+    <!-- AR Mode: Markerless dengan static positioning -->
     <div id="ar-container" class="scene-container active">
       <a-scene
         embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;"
+        arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
         vr-mode-ui="enabled: false"
         renderer="logarithmicDepthBuffer: true; precision: medium;"
+        gesture-detector
       >
-        <!-- Objek pelampung muncul langsung di depan kamera -->
-        <a-entity position="0 0 -3">
+        <!-- Objek container yang akan diletakkan -->
+        <a-entity id="object-container" visible="false">
           <a-entity
-            position="0 1.5 0"
+            position="0 0 0"
             rotation="0 0 0"
             animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
-            animation__float="property: position; to: 0 1.8 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine"
+            animation__float="property: position; to: 0 0.3 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine"
           >
             <!-- Pelampung -->
             <a-torus
@@ -247,7 +275,7 @@
             ></a-text>
           </a-entity>
 
-          <!-- Objek tambahan untuk konteks -->
+          <!-- Objek tambahan -->
           <a-box
             position="-1 0.5 0"
             width="0.3"
@@ -265,7 +293,7 @@
           ></a-sphere>
         </a-entity>
 
-        <a-entity camera look-controls></a-entity>
+        <a-entity camera look-controls="enabled: true"></a-entity>
       </a-scene>
     </div>
 
@@ -321,8 +349,64 @@
     </div>
 
     <script>
+      // Register gesture detector component
+      AFRAME.registerComponent("gesture-detector", {
+        schema: {
+          element: { default: "" },
+        },
+        init: function () {
+          this.targetElement =
+            this.data.element && document.querySelector(this.data.element);
+        },
+      });
+
       let currentMode = "ar";
       let arSceneLoaded = false;
+      let objectPlaced = false;
+
+      function placeObject() {
+        const scene = document.querySelector("a-scene");
+        const camera = scene.querySelector("[camera]");
+        const objectContainer = document.getElementById("object-container");
+
+        if (!objectPlaced) {
+          // Get camera position and rotation
+          const cameraPosition = camera.getAttribute("position");
+          const cameraRotation = camera.getAttribute("rotation");
+
+          // Calculate position 2 meters in front of camera
+          const distance = 2;
+          const radians = (cameraRotation.y * Math.PI) / 180;
+
+          const newX = cameraPosition.x - Math.sin(radians) * distance;
+          const newZ = cameraPosition.z - Math.cos(radians) * distance;
+
+          // Place object at calculated position
+          objectContainer.setAttribute("position", `${newX} 0 ${newZ}`);
+          objectContainer.setAttribute("visible", "true");
+
+          objectPlaced = true;
+
+          // Update button and info
+          document.getElementById("place-button").innerHTML =
+            "🔄 PINDAHKAN OBJEK";
+          document.getElementById("info-text").innerHTML =
+            "Objek sudah diletakkan! Gerakkan kamera untuk melihat dari berbagai sudut";
+
+          console.log("✅ Objek diletakkan di:", newX, 0, newZ);
+        } else {
+          // Reset and place again
+          objectPlaced = false;
+          objectContainer.setAttribute("visible", "false");
+          document.getElementById("place-button").innerHTML =
+            "📍 LETAKKAN OBJEK";
+          document.getElementById("info-text").innerHTML =
+            "Arahkan kamera, lalu tekan tombol untuk meletakkan objek";
+
+          // Place again
+          setTimeout(() => placeObject(), 100);
+        }
+      }
 
       function initExperience() {
         console.log("🚀 Memulai aplikasi...");
@@ -412,7 +496,7 @@
 
         if (!isMobile) {
           info.innerHTML =
-            "Desktop Mode: Objek muncul otomatis di depan webcam";
+            "Desktop Mode: Arahkan webcam, lalu tekan tombol untuk meletakkan objek";
         }
       }
 
@@ -420,6 +504,7 @@
         const ar = document.getElementById("ar-container");
         const vr = document.getElementById("vr-container");
         const info = document.getElementById("info-text");
+        const placeBtn = document.getElementById("place-button");
 
         currentMode = mode;
         console.log("🔄 Switch mode ke:", mode);
@@ -431,29 +516,23 @@
         if (mode === "ar") {
           ar.classList.add("active");
           vr.classList.remove("active");
+          placeBtn.style.display = "block";
 
           const isMobile = isMobileDevice();
           if (isMobile) {
-            info.innerHTML = "Mode AR: Objek pelampung muncul otomatis";
+            info.innerHTML = "Mode AR: Tekan tombol untuk meletakkan objek";
           } else {
-            info.innerHTML = "Mode AR: Objek muncul di depan kamera";
+            info.innerHTML =
+              "Mode AR: Tekan tombol untuk meletakkan objek di depan kamera";
           }
 
           document
             .querySelector(".mode-btn:nth-child(1)")
             .classList.add("active");
-
-          setTimeout(() => {
-            const video = document.querySelector("video");
-            if (video) {
-              console.log("📹 Video element found in AR mode");
-            } else {
-              console.warn("❌ Video element NOT found in AR mode");
-            }
-          }, 1000);
         } else {
           vr.classList.add("active");
           ar.classList.remove("active");
+          placeBtn.style.display = "none";
           document.getElementById("loading-overlay").style.display = "none";
 
           console.log("🌊 VR Mode aktif");
