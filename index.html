@@ -57,12 +57,19 @@
         left: 50%;
         transform: translateX(-50%);
         z-index: 9999;
-        background: rgba(0, 0, 0, 0.8);
+        background: rgba(0, 0, 0, 0.9);
         color: white;
         padding: 15px 25px;
         border-radius: 10px;
         text-align: center;
-        max-width: 80%;
+        max-width: 90%;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      #instructions a {
+        color: #ff6b00;
+        text-decoration: underline;
+        font-weight: bold;
       }
     </style>
   </head>
@@ -77,12 +84,22 @@
 
     <!-- Instruksi -->
     <div id="instructions">
-      <span id="ar-instruction"
-        >Arahkan kamera ke marker Hiro untuk melihat pelampung kapal</span
-      >
-      <span id="vr-instruction" style="display: none"
-        >Klik tombol VR di kanan bawah untuk mode immersive</span
-      >
+      <span id="ar-instruction">
+        <strong>Mode AR membutuhkan:</strong><br />
+        1. Izinkan akses kamera saat diminta<br />
+        2. Download & cetak
+        <a
+          href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
+          target="_blank"
+          style="color: #ff6b00"
+          >Marker Hiro</a
+        ><br />
+        3. Arahkan kamera ke marker untuk lihat objek 3D
+      </span>
+      <span id="vr-instruction" style="display: none">
+        Gunakan mouse untuk melihat sekeliling. Klik tombol VR di kanan bawah
+        untuk mode immersive (jika ada headset VR)
+      </span>
     </div>
 
     <!-- Scene AR -->
