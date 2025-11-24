@@ -2,229 +2,86 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <title>AR Measurement Demo</title>
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AR Browser Native</title>
+
+    <script
+      type="module"
+      src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"
+    ></script>
 
     <style>
       body {
         margin: 0;
-        overflow: hidden;
+        padding: 0;
+        background-color: #eee;
         font-family: sans-serif;
       }
 
-      #ui-layer {
-        position: fixed;
-        top: 0;
-        left: 0;
+      /* Container Full Screen */
+      model-viewer {
         width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+        height: 100vh;
+        background-color: #222; /* Warna background saat loading */
       }
 
-      .info-box {
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 15px;
-        margin: 10px;
-        border-radius: 15px;
-        text-align: center;
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      }
-
-      #distance-badge {
-        font-size: 24px;
-        font-weight: bold;
-        color: #00ffea;
-        display: none; /* Sembunyi sebelum objek ditaruh */
-      }
-
+      /* Tombol Aktivasi AR */
       #ar-button {
-        pointer-events: auto;
-        padding: 15px 40px;
-        font-size: 18px;
-        background: #ff6b00;
-        color: white;
-        border: 3px solid white;
-        border-radius: 50px;
-        margin-bottom: 40px;
-        align-self: center;
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: white;
+        color: black;
+        border-radius: 30px;
+        border: none;
+        padding: 15px 30px;
+        font-size: 16px;
         font-weight: bold;
-        box-shadow: 0 4px 15px rgba(255, 107, 0, 0.5);
-        display: none;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        z-index: 100;
       }
 
-      #start-screen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: #1a1a1a;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+      /* Pesan Error jika HP jadul */
+      #error-msg {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         color: white;
         text-align: center;
-      }
-      .start-btn {
-        padding: 15px 30px;
-        background: #00d2ff;
-        border: none;
-        border-radius: 30px;
-        font-weight: bold;
-        font-size: 16px;
-        margin-top: 20px;
-        cursor: pointer;
       }
     </style>
   </head>
   <body>
-    <div id="start-screen">
-      <h1>📏 AR Pengukur Jarak</h1>
-      <p>Menggunakan Euclidean Distance</p>
-      <button class="start-btn" onclick="enterAR()">MULAI AR</button>
-    </div>
-
-    <div id="ui-layer" style="display: none">
-      <div class="info-box">
-        <div id="status-msg">Mencari lantai...</div>
-        <div id="distance-badge">Jarak: 0.0 m</div>
-      </div>
-      <button id="ar-button">📍 LETAKKAN OBJEK</button>
-    </div>
-
-    <a-scene
-      webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: #ui-layer"
-      vr-mode-ui="enabled: false"
+    <model-viewer
+      src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+      ios-src="https://modelviewer.dev/shared-assets/models/Astronaut.usdz"
+      alt="Sebuah Astronot 3D"
+      ar
+      ar-modes="scene-viewer webxr quick-look"
+      camera-controls
+      auto-rotate
+      shadow-intensity="1"
+      ar-scale="auto"
+      ar-placement="floor"
     >
-      <a-light type="directional" intensity="1" position="-1 2 1"></a-light>
-      <a-light type="ambient" intensity="0.5"></a-light>
+      <button slot="ar-button" id="ar-button">📸 BUKA KAMERA AR</button>
 
-      <a-entity
-        id="reticle"
-        geometry="primitive: ring; radiusInner: 0.15; radiusOuter: 0.2"
-        material="color: white; shader: flat"
-        rotation="-90 0 0"
-        visible="false"
-      ></a-entity>
-    </a-scene>
+      <div id="error-msg">HP ini tidak mendukung AR</div>
+    </model-viewer>
 
     <script>
-      let scene, reticle, arButton, statusMsg, distanceBadge;
-      let placedObject = null; // Menyimpan referensi objek yg ditaruh
-      let trackingInterval = null;
+      const modelViewer = document.querySelector("model-viewer");
 
-      function enterAR() {
-        document.getElementById("start-screen").style.display = "none";
-        document.querySelector("a-scene").enterVR();
-      }
-
-      document.querySelector("a-scene").addEventListener("loaded", function () {
-        scene = this;
-        reticle = document.getElementById("reticle");
-        arButton = document.getElementById("ar-button");
-        statusMsg = document.getElementById("status-msg");
-        distanceBadge = document.getElementById("distance-badge");
-        const uiLayer = document.getElementById("ui-layer");
-
-        scene.addEventListener("enter-vr", () => {
-          if (scene.is("ar-mode")) uiLayer.style.display = "flex";
-        });
-
-        arButton.addEventListener("click", onPlaceObject);
-
-        scene.addEventListener("ar-hit-test-start", () => {
-          statusMsg.textContent = "✅ Lantai terdeteksi!";
-          reticle.setAttribute("visible", "true");
-          if (!placedObject) arButton.style.display = "block";
-        });
-
-        scene.addEventListener("ar-hit-test-lost", () => {
-          if (!placedObject) {
-            statusMsg.textContent = "🔍 Mencari lantai...";
-            arButton.style.display = "none";
-            reticle.setAttribute("visible", "false");
-          }
-        });
-      });
-
-      function onPlaceObject() {
-        if (!reticle.getAttribute("visible")) return;
-
-        // 1. Hapus objek lama jika ada (agar cuma 1 objek untuk demo pengukuran)
-        if (placedObject) {
-          placedObject.parentNode.removeChild(placedObject);
-        }
-
-        // 2. Buat Objek Baru di posisi Reticle
-        const position = reticle.object3D.position;
-        placedObject = document.createElement("a-entity");
-        placedObject.setAttribute("position", position);
-
-        // Visual Pelampung Sederhana
-        const torus = document.createElement("a-torus");
-        torus.setAttribute("color", "orange");
-        torus.setAttribute("radius", "0.3");
-        torus.setAttribute("rotation", "90 0 0");
-        torus.setAttribute("position", "0 0.5 0");
-
-        const pole = document.createElement("a-cylinder");
-        pole.setAttribute("color", "white");
-        pole.setAttribute("height", "1.5");
-        pole.setAttribute("radius", "0.05");
-        pole.setAttribute("position", "0 0.75 0");
-
-        placedObject.appendChild(torus);
-        placedObject.appendChild(pole);
-        scene.appendChild(placedObject);
-
-        // 3. Update UI
-        arButton.textContent = "📍 PINDAHKAN OBJEK";
-        statusMsg.textContent = "Objek Terkunci (Fixed)";
-        distanceBadge.style.display = "block";
-
-        // 4. Mulai Interval Penghitung Jarak Euclidean
-        startDistanceTracking();
-      }
-
-      function startDistanceTracking() {
-        if (trackingInterval) clearInterval(trackingInterval);
-
-        trackingInterval = setInterval(() => {
-          if (!placedObject || !scene.camera) return;
-
-          // --- INI RUMUS EUCLIDEANNYA ---
-          // Ambil posisi kamera (HP)
-          const cameraPos = scene.camera.el.object3D.position;
-          // Ambil posisi objek
-          const objectPos = placedObject.object3D.position;
-
-          // Three.js function: distanceTo() = sqrt((x2-x1)^2 + (y2-y1)^2 + (z2-z1)^2)
-          const distance = cameraPos.distanceTo(objectPos);
-
-          // Update Text
-          distanceBadge.textContent =
-            "Jarak: " + distance.toFixed(2) + " meter";
-
-          // Ubah warna teks jika dekat/jauh
-          if (distance < 1.0) {
-            distanceBadge.style.color = "#ff4444"; // Merah jika terlalu dekat
-          } else {
-            distanceBadge.style.color = "#00ffea"; // Biru normal
-          }
-        }, 100); // Hitung setiap 100ms
+      // Cek apakah HP support AR
+      if (!modelViewer.canActivateAR) {
+        console.log("HP ini mungkin tidak mendukung AR Native");
       }
     </script>
   </body>
