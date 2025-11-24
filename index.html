@@ -4,221 +4,477 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>Demo AR/VR - Keselamatan Kapal</title>
+    <title>Mobile AR/VR Demo</title>
+
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ar.js@3.4.5/aframe/build/aframe-ar.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
     <style>
       body {
         margin: 0;
         overflow: hidden;
-        font-family: Arial, sans-serif;
+        font-family: sans-serif;
+        touch-action: none;
+      }
+
+      #start-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-align: center;
+      }
+
+      .btn-main {
+        padding: 15px 40px;
+        font-size: 18px;
+        background: #ff6b00;
+        color: white;
+        border: none;
+        border-radius: 50px;
+        margin-top: 20px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(255, 107, 0, 0.4);
+      }
+
+      #ui-layer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1000;
+        display: none;
       }
 
       #mode-selector {
-        position: fixed;
+        position: absolute;
         top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 99999;
-        background: rgba(0, 0, 0, 0.8);
-        padding: 10px 20px;
-        border-radius: 30px;
+        width: 100%;
         display: flex;
+        justify-content: center;
         gap: 10px;
+        pointer-events: auto;
       }
 
       .mode-btn {
         padding: 10px 20px;
-        border: none;
-        background: #333;
+        background: rgba(0, 0, 0, 0.6);
+        border: 2px solid white;
         color: white;
-        cursor: pointer;
         border-radius: 20px;
         font-weight: bold;
+        font-size: 14px;
+        cursor: pointer;
       }
-
       .mode-btn.active {
         background: #ff6b00;
-        color: white;
+        border-color: #ff6b00;
       }
 
-      /* Container Styles */
-      #ar-container,
-      #vr-container {
+      .scene-container {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        visibility: hidden;
-        z-index: 0;
+        display: none;
+      }
+      .scene-container.active {
+        display: block;
       }
 
-      /* Class utility untuk menampilkan scene */
-      .show-scene {
-        visibility: visible !important;
-        z-index: 1 !important;
+      video {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        margin: 0 !important;
       }
 
-      /* Pastikan video AR.js tidak tertutup */
-      #arjs-video {
-        z-index: 0 !important;
-      }
-
-      #instructions {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 99999;
+      #info-text {
+        pointer-events: auto;
+        padding: 10px 20px;
         background: rgba(0, 0, 0, 0.7);
+        border-radius: 10px;
+        display: inline-block;
+      }
+
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         color: white;
-        padding: 10px;
-        border-radius: 5px;
-        text-align: center;
-        width: 80%;
+      }
+
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid #ff6b00;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .manual-btn {
+        padding: 10px 30px;
+        background: #ff6b00;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        margin-top: 15px;
+        cursor: pointer;
+        font-size: 14px;
       }
     </style>
   </head>
   <body>
-    <div id="mode-selector">
-      <button class="mode-btn active" onclick="switchMode('ar')">
-        Mode AR
+    <div id="start-screen">
+      <h1>🌊 Demo Keselamatan</h1>
+      <p style="padding: 0 20px; font-size: 14px; color: #ccc">
+        Pengalaman AR/VR interaktif untuk keselamatan laut
+      </p>
+      <button class="btn-main" onclick="initExperience()">
+        MULAI APLIKASI
       </button>
-      <button class="mode-btn" onclick="switchMode('vr')">Mode VR</button>
     </div>
 
-    <div id="instructions">
-      <span id="text-instruction">Arahkan kamera ke Marker Hiro</span>
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <p>Memuat kamera...</p>
+      <button class="manual-btn" onclick="manualCameraRequest()">
+        Refresh Halaman
+      </button>
     </div>
 
-    <div id="ar-container" class="show-scene">
+    <div id="ui-layer">
+      <div id="mode-selector">
+        <button class="mode-btn active" onclick="setMode('ar')">Mode AR</button>
+        <button class="mode-btn" onclick="setMode('vr')">Mode VR</button>
+      </div>
+      <div
+        style="
+          position: absolute;
+          bottom: 30px;
+          width: 100%;
+          text-align: center;
+          color: white;
+          text-shadow: 1px 1px 2px black;
+          pointer-events: none;
+        "
+      >
+        <span id="info-text"
+          >Objek pelampung muncul otomatis di depan Anda</span
+        >
+      </div>
+    </div>
+
+    <!-- AR Mode: Markerless (Tanpa Marker) -->
+    <div id="ar-container" class="scene-container active">
       <a-scene
         embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;"
         vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; precision: medium;"
       >
-        <a-marker preset="hiro">
-          <a-torus
-            position="0 0.5 0"
-            radius="0.4"
-            radius-tubular="0.1"
-            color="orange"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"
+        <!-- Objek pelampung muncul langsung di depan kamera -->
+        <a-entity position="0 0 -3">
+          <a-entity
+            position="0 1.5 0"
+            rotation="0 0 0"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 5000; easing: linear"
+            animation__float="property: position; to: 0 1.8 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine"
           >
-          </a-torus>
+            <!-- Pelampung -->
+            <a-torus
+              radius="0.4"
+              radius-tubular="0.1"
+              color="#ff6b00"
+            ></a-torus>
 
-          <a-cylinder
-            position="0 1 0"
-            radius="0.02"
-            height="0.8"
-            color="white"
-          ></a-cylinder>
-          <a-plane
-            position="0.15 1.3 0"
+            <!-- Tiang -->
+            <a-cylinder
+              position="0 0.5 0"
+              radius="0.03"
+              height="0.8"
+              color="white"
+            ></a-cylinder>
+
+            <!-- Bendera -->
+            <a-plane
+              position="0.2 0.8 0"
+              width="0.3"
+              height="0.2"
+              color="red"
+            ></a-plane>
+
+            <!-- Text -->
+            <a-text
+              value="PELAMPUNG\nKESELAMATAN"
+              position="-0.6 1.3 0"
+              scale="0.8 0.8 0.8"
+              color="yellow"
+              align="center"
+            ></a-text>
+          </a-entity>
+
+          <!-- Objek tambahan untuk konteks -->
+          <a-box
+            position="-1 0.5 0"
             width="0.3"
-            height="0.2"
-            color="red"
-          ></a-plane>
+            height="0.3"
+            depth="0.3"
+            color="#4CC3D9"
+            animation="property: rotation; to: 360 0 360; loop: true; dur: 8000; easing: linear"
+          ></a-box>
 
-          <a-text
-            value="Pelampung Kapal"
-            position="-0.7 1.8 0"
-            color="yellow"
-            width="2"
-          ></a-text>
-        </a-marker>
+          <a-sphere
+            position="1 0.5 0"
+            radius="0.2"
+            color="#FFC65D"
+            animation="property: position; to: 1 1 0; dir: alternate; loop: true; dur: 1500; easing: easeInOutSine"
+          ></a-sphere>
+        </a-entity>
 
-        <a-entity camera></a-entity>
+        <a-entity camera look-controls></a-entity>
       </a-scene>
     </div>
 
-    <div id="vr-container">
-      <a-scene vr-mode-ui="enabled: true">
-        <a-sky color="#1E90FF"></a-sky>
-        <a-ocean
-          width="50"
-          depth="50"
-          density="40"
-          opacity="1"
-          position="0 0 0"
-        ></a-ocean>
+    <!-- VR Mode -->
+    <div id="vr-container" class="scene-container">
+      <a-scene
+        vr-mode-ui="enabled: false"
+        embedded
+        renderer="antialias: true; alpha: true"
+        loading-screen="enabled: false"
+      >
+        <a-sky color="#87CEEB"></a-sky>
 
-        <a-entity position="0 0.5 -3">
-          <a-torus
-            radius="0.5"
-            radius-tubular="0.15"
-            color="orange"
-            animation="property: position; to: 0 0.8 -3; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine"
-          >
-          </a-torus>
+        <a-plane
+          position="0 0 0"
+          rotation="-90 0 0"
+          width="100"
+          height="100"
+          color="#1E90FF"
+          shader="flat"
+        ></a-plane>
+
+        <a-entity
+          position="0 1.5 -3"
+          animation="property: position; dir: alternate; to: 0 2 -3; loop: true; dur: 2000; easing: easeInOutSine"
+        >
+          <a-torus radius="0.5" radius-tubular="0.15" color="#ff6b00"></a-torus>
           <a-cylinder
-            position="0 1 0"
-            radius="0.03"
+            position="0 0.5 0"
+            radius="0.05"
             height="1"
             color="white"
           ></a-cylinder>
-          <a-plane
-            position="0.2 1.4 0"
-            width="0.4"
-            height="0.3"
-            color="red"
-          ></a-plane>
           <a-text
-            value="Pelampung VR"
-            position="-0.5 2 0"
-            color="white"
-            width="4"
+            value="VR MODE AKTIF!"
+            position="-1 1.5 0"
+            scale="0.8 0.8 0.8"
+            color="yellow"
+            align="center"
           ></a-text>
         </a-entity>
 
-        <a-camera position="0 1.6 0">
-          <a-cursor color="yellow"></a-cursor>
+        <a-box position="-2 1 -3" color="#4CC3D9"></a-box>
+        <a-box position="2 1 -3" color="#FFC65D"></a-box>
+        <a-sphere position="0 3 -5" radius="0.5" color="#EF2D5E"></a-sphere>
+
+        <a-camera
+          look-controls="enabled: true; touchEnabled: true; mouseEnabled: true"
+        >
+          <a-cursor></a-cursor>
         </a-camera>
       </a-scene>
     </div>
 
     <script>
-      function switchMode(mode) {
-        const arContainer = document.getElementById("ar-container");
-        const vrContainer = document.getElementById("vr-container");
-        const arScene = arContainer.querySelector("a-scene");
-        const vrScene = vrContainer.querySelector("a-scene");
-        const textInfo = document.getElementById("text-instruction");
-        const buttons = document.querySelectorAll(".mode-btn");
+      let currentMode = "ar";
+      let arSceneLoaded = false;
 
-        // Update tombol UI
-        buttons.forEach((b) => b.classList.remove("active"));
+      function initExperience() {
+        console.log("🚀 Memulai aplikasi...");
+
+        if (
+          typeof DeviceOrientationEvent !== "undefined" &&
+          typeof DeviceOrientationEvent.requestPermission === "function"
+        ) {
+          DeviceOrientationEvent.requestPermission()
+            .then((response) => {
+              if (response === "granted") {
+                console.log("✅ Sensor granted");
+                startApp();
+              } else {
+                console.log("⚠️ Sensor denied");
+                startApp();
+              }
+            })
+            .catch(console.error);
+        } else {
+          startApp();
+        }
+      }
+
+      function startApp() {
+        document.getElementById("start-screen").style.display = "none";
+        document.getElementById("loading-overlay").style.display = "flex";
+
+        console.log("📹 Loading AR Scene...");
+
+        setTimeout(() => {
+          document.getElementById("ui-layer").style.display = "block";
+          window.dispatchEvent(new Event("resize"));
+          checkDeviceType();
+          monitorARScene();
+        }, 1000);
+      }
+
+      function monitorARScene() {
+        let checkCount = 0;
+        const maxChecks = 10;
+
+        const checkInterval = setInterval(() => {
+          checkCount++;
+          const video = document.querySelector("video");
+
+          if (video && video.videoWidth > 0) {
+            console.log(
+              "✅ Video AR aktif!",
+              video.videoWidth,
+              "x",
+              video.videoHeight
+            );
+            arSceneLoaded = true;
+            document.getElementById("loading-overlay").style.display = "none";
+            clearInterval(checkInterval);
+          } else if (checkCount >= maxChecks) {
+            console.warn("⚠️ AR gagal load setelah", checkCount, "detik");
+            clearInterval(checkInterval);
+            document.getElementById("loading-overlay").style.display = "none";
+
+            if (confirm("Kamera tidak terdeteksi. Mau coba Mode VR dulu?")) {
+              setMode("vr");
+            }
+          } else {
+            console.log(
+              "⏳ Menunggu video AR... (" + checkCount + "/" + maxChecks + ")"
+            );
+          }
+        }, 1000);
+      }
+
+      function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+      }
+
+      function manualCameraRequest() {
+        console.log("🔧 Reload halaman...");
+        location.reload();
+      }
+
+      function checkDeviceType() {
+        const isMobile = isMobileDevice();
+        const info = document.getElementById("info-text");
+
+        if (!isMobile) {
+          info.innerHTML =
+            "Desktop Mode: Objek muncul otomatis di depan webcam";
+        }
+      }
+
+      function setMode(mode) {
+        const ar = document.getElementById("ar-container");
+        const vr = document.getElementById("vr-container");
+        const info = document.getElementById("info-text");
+
+        currentMode = mode;
+        console.log("🔄 Switch mode ke:", mode);
+
+        document
+          .querySelectorAll(".mode-btn")
+          .forEach((btn) => btn.classList.remove("active"));
 
         if (mode === "ar") {
-          buttons[0].classList.add("active");
+          ar.classList.add("active");
+          vr.classList.remove("active");
 
-          // Tampilkan AR, Sembunyikan VR
-          arContainer.classList.add("show-scene");
-          vrContainer.classList.remove("show-scene");
+          const isMobile = isMobileDevice();
+          if (isMobile) {
+            info.innerHTML = "Mode AR: Objek pelampung muncul otomatis";
+          } else {
+            info.innerHTML = "Mode AR: Objek muncul di depan kamera";
+          }
 
-          // Manajemen video element AR.js (kadang video tetap muncul di VR mode jika tidak di hide)
-          const arVideo = document.getElementById("arjs-video");
-          if (arVideo) arVideo.style.display = "block";
+          document
+            .querySelector(".mode-btn:nth-child(1)")
+            .classList.add("active");
 
-          textInfo.innerHTML =
-            "Mode AR: Arahkan kamera ke Marker Hiro (Butuh HTTPS)";
+          setTimeout(() => {
+            const video = document.querySelector("video");
+            if (video) {
+              console.log("📹 Video element found in AR mode");
+            } else {
+              console.warn("❌ Video element NOT found in AR mode");
+            }
+          }, 1000);
         } else {
-          buttons[1].classList.add("active");
+          vr.classList.add("active");
+          ar.classList.remove("active");
+          document.getElementById("loading-overlay").style.display = "none";
 
-          // Tampilkan VR, Sembunyikan AR
-          vrContainer.classList.add("show-scene");
-          arContainer.classList.remove("show-scene");
+          console.log("🌊 VR Mode aktif");
 
-          // Sembunyikan video webcam saat mode VR
-          const arVideo = document.getElementById("arjs-video");
-          if (arVideo) arVideo.style.display = "none";
+          setTimeout(() => {
+            const vrScene = vr.querySelector("a-scene");
+            if (vrScene) {
+              window.dispatchEvent(new Event("resize"));
+            }
+          }, 500);
 
-          textInfo.innerHTML =
-            "Mode VR: Gunakan mouse untuk melihat sekeliling";
+          const isMobile = isMobileDevice();
+          if (isMobile) {
+            info.innerHTML = "Mode VR: Gerakkan HP untuk melihat sekeliling";
+          } else {
+            info.innerHTML = "Mode VR: Klik & drag untuk melihat sekeliling";
+          }
+
+          document
+            .querySelector(".mode-btn:nth-child(2)")
+            .classList.add("active");
         }
       }
     </script>
