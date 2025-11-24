@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Permissions-Policy" content="xr-spatial-tracking=*" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demo AR/VR - Keselamatan Kapal</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ar.js@3.4.5/aframe/build/aframe-ar.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+      }
+      #mode-selector {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 15px 25px;
+        border-radius: 10px;
+        display: flex;
+        gap: 15px;
+      }
+      .mode-btn {
+        padding: 12px 24px;
+        border: 2px solid #fff;
+        background: transparent;
+        color: white;
+        cursor: pointer;
+        border-radius: 5px;
+        font-size: 16px;
+        transition: all 0.3s;
+      }
+      .mode-btn:hover {
+        background: #fff;
+        color: #000;
+      }
+      .mode-btn.active {
+        background: #ff6b00;
+        border-color: #ff6b00;
+      }
+      #ar-scene,
+      #vr-scene {
+        display: none;
+      }
+      #ar-scene.active,
+      #vr-scene.active {
+        display: block;
+      }
+      #instructions {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        text-align: center;
+        max-width: 80%;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Pemilih Mode -->
+    <div id="mode-selector">
+      <button class="mode-btn active" onclick="switchMode('ar')">
+        Mode AR
+      </button>
+      <button class="mode-btn" onclick="switchMode('vr')">Mode VR</button>
+    </div>
+
+    <!-- Instruksi -->
+    <div id="instructions">
+      <span id="ar-instruction"
+        >Arahkan kamera ke marker Hiro untuk melihat pelampung kapal</span
+      >
+      <span id="vr-instruction" style="display: none"
+        >Klik tombol VR di kanan bawah untuk mode immersive</span
+      >
+    </div>
+
+    <!-- Scene AR -->
+    <div id="ar-scene" class="active">
+      <a-scene
+        embedded
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+      >
+        <a-marker preset="hiro">
+          <!-- Pelampung -->
+          <a-torus
+            position="0 0.5 0"
+            radius="0.4"
+            radius-tubular="0.1"
+            color="orange"
+          >
+            <a-animation
+              attribute="rotation"
+              dur="4000"
+              to="0 360 0"
+              easing="linear"
+              repeat="indefinite"
+            ></a-animation>
+          </a-torus>
+
+          <!-- Bendera di atas pelampung -->
+          <a-cylinder
+            position="0 1 0"
+            radius="0.02"
+            height="0.8"
+            color="white"
+          ></a-cylinder>
+          <a-plane
+            position="0.15 1.3 0"
+            width="0.3"
+            height="0.2"
+            color="red"
+            rotation="0 0 0"
+          ></a-plane>
+
+          <!-- Text label -->
+          <a-text
+            value="Pelampung Kapal"
+            position="-0.7 1.8 0"
+            color="yellow"
+            width="2"
+          ></a-text>
+        </a-marker>
+        <a-entity camera></a-entity>
+      </a-scene>
+    </div>
+
+    <!-- Scene VR -->
+    <div id="vr-scene">
+      <a-scene vr-mode-ui="enabled: true">
+        <!-- Lingkungan laut -->
+        <a-sky color="#1E90FF"></a-sky>
+        <a-ocean width="50" depth="50" position="0 0 0"></a-ocean>
+
+        <!-- Pelampung 1 -->
+        <a-entity position="0 1 -5">
+          <a-torus radius="0.5" radius-tubular="0.15" color="orange">
+            <a-animation
+              attribute="position"
+              dur="2000"
+              from="0 0 0"
+              to="0 0.3 0"
+              direction="alternate"
+              easing="ease-in-out-sine"
+              repeat="indefinite"
+            ></a-animation>
+          </a-torus>
+          <a-cylinder
+            position="0 1 0"
+            radius="0.03"
+            height="1"
+            color="white"
+          ></a-cylinder>
+          <a-plane
+            position="0.2 1.4 0"
+            width="0.4"
+            height="0.3"
+            color="red"
+          ></a-plane>
+          <a-text
+            value="Pelampung 1"
+            position="-0.5 2 0"
+            color="white"
+            width="3"
+          ></a-text>
+        </a-entity>
+
+        <!-- Pelampung 2 -->
+        <a-entity position="-3 1 -4">
+          <a-torus radius="0.5" radius-tubular="0.15" color="orange">
+            <a-animation
+              attribute="position"
+              dur="2500"
+              from="0 0 0"
+              to="0 0.4 0"
+              direction="alternate"
+              easing="ease-in-out-sine"
+              repeat="indefinite"
+            ></a-animation>
+          </a-torus>
+          <a-cylinder
+            position="0 1 0"
+            radius="0.03"
+            height="1"
+            color="white"
+          ></a-cylinder>
+          <a-plane
+            position="0.2 1.4 0"
+            width="0.4"
+            height="0.3"
+            color="yellow"
+          ></a-plane>
+          <a-text
+            value="Pelampung 2"
+            position="-0.5 2 0"
+            color="white"
+            width="3"
+          ></a-text>
+        </a-entity>
+
+        <!-- Pelampung 3 -->
+        <a-entity position="3 1 -4">
+          <a-torus radius="0.5" radius-tubular="0.15" color="orange">
+            <a-animation
+              attribute="position"
+              dur="1800"
+              from="0 0 0"
+              to="0 0.25 0"
+              direction="alternate"
+              easing="ease-in-out-sine"
+              repeat="indefinite"
+            ></a-animation>
+          </a-torus>
+          <a-cylinder
+            position="0 1 0"
+            radius="0.03"
+            height="1"
+            color="white"
+          ></a-cylinder>
+          <a-plane
+            position="0.2 1.4 0"
+            width="0.4"
+            height="0.3"
+            color="green"
+          ></a-plane>
+          <a-text
+            value="Pelampung 3"
+            position="-0.5 2 0"
+            color="white"
+            width="3"
+          ></a-text>
+        </a-entity>
+
+        <!-- Info panel -->
+        <a-plane
+          position="0 2.5 -6"
+          width="4"
+          height="1.5"
+          color="#333333"
+          opacity="0.9"
+        >
+          <a-text
+            value="Demo VR: Keselamatan Kapal"
+            position="-1.8 0.5 0.01"
+            color="white"
+            width="4"
+          ></a-text>
+          <a-text
+            value="Pelampung adalah alat keselamatan\nuntuk menandai posisi di laut"
+            position="-1.8 0 0.01"
+            color="#FFD700"
+            width="3.5"
+          ></a-text>
+        </a-plane>
+
+        <!-- Kamera -->
+        <a-camera>
+          <a-cursor></a-cursor>
+        </a-camera>
+      </a-scene>
+    </div>
+
+    <script>
+      function switchMode(mode) {
+        const arScene = document.getElementById("ar-scene");
+        const vrScene = document.getElementById("vr-scene");
+        const arInstruction = document.getElementById("ar-instruction");
+        const vrInstruction = document.getElementById("vr-instruction");
+        const buttons = document.querySelectorAll(".mode-btn");
+
+        // Update tombol aktif
+        buttons.forEach((btn) => btn.classList.remove("active"));
+        event.target.classList.add("active");
+
+        if (mode === "ar") {
+          arScene.classList.add("active");
+          vrScene.classList.remove("active");
+          arInstruction.style.display = "inline";
+          vrInstruction.style.display = "none";
+        } else {
+          vrScene.classList.add("active");
+          arScene.classList.remove("active");
+          vrInstruction.style.display = "inline";
+          arInstruction.style.display = "none";
+        }
+      }
+    </script>
+  </body>
+</html>
