@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>Museum Joystick Mode</title>
+    <title>Museum Joystick - Render Fix</title>
 
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
@@ -18,9 +18,50 @@
         overflow: hidden;
         user-select: none;
         -webkit-user-select: none;
+        font-family: "Segoe UI", sans-serif;
       }
 
-      /* Area Joystick (Kiri Bawah) */
+      /* LOADING SCREEN */
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition: opacity 1s ease-out;
+      }
+
+      .loader-text {
+        color: #00d2ff;
+        font-size: 20px;
+        margin-bottom: 15px;
+        font-weight: bold;
+        letter-spacing: 1px;
+      }
+
+      .progress-container {
+        width: 70%;
+        max-width: 300px;
+        height: 8px;
+        background: #333;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        width: 0%;
+        height: 100%;
+        background: #00d2ff;
+        transition: width 0.3s ease;
+      }
+
+      /* JOYSTICK & UI */
       #joystick-zone {
         position: absolute;
         bottom: 20px;
@@ -28,25 +69,21 @@
         width: 150px;
         height: 150px;
         z-index: 999;
-        /* Area ini tidak boleh menggerakkan kamera */
         touch-action: none;
       }
 
-      /* Instruksi */
       #instruction {
         position: fixed;
         top: 10px;
         width: 100%;
         text-align: center;
         color: white;
-        font-family: sans-serif;
         pointer-events: none;
         text-shadow: 1px 1px 2px black;
         font-size: 14px;
         z-index: 900;
       }
 
-      /* Popup Info */
       #info-overlay {
         display: none;
         position: fixed;
@@ -61,7 +98,6 @@
         border-radius: 15px;
         border: 2px solid #00d2ff;
         z-index: 1000;
-        font-family: sans-serif;
         text-align: center;
       }
       .close-btn {
@@ -77,10 +113,19 @@
     </style>
   </head>
   <body>
-    <div id="instruction">
-      🕹️ KIRI: Joystick Jalan | 👋 KANAN: Geser Nengok | 👆 TAP: Klik Objek
+    <div id="loading-screen">
+      <div class="loader-text">
+        MEMUAT PAMERAN... <span id="percent-text">0%</span>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <p style="color: #666; font-size: 12px; margin-top: 10px">
+        Sedang merender objek 3D...
+      </p>
     </div>
 
+    <div id="instruction">🕹️ KIRI: Jalan | 👋 KANAN: Tengok | 👆 TAP: Info</div>
     <div id="joystick-zone"></div>
 
     <div id="info-overlay">
@@ -90,15 +135,13 @@
     </div>
 
     <a-scene
+      id="main-scene"
       vr-mode-ui="enabled: false"
       cursor="rayOrigin: mouse"
       raycaster="objects: .clickable"
     >
       <a-assets>
-        <a-asset-item
-          id="model-bebek"
-          src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb"
-        ></a-asset-item>
+        <a-asset-item id="model-bebek" src="Hitem3d.glb"></a-asset-item>
       </a-assets>
 
       <a-entity
@@ -113,48 +156,120 @@
           position="0 1.6 0"
         ></a-entity>
       </a-entity>
-
-      <a-entity
-        class="clickable"
-        gltf-model="#model-bebek"
-        position="0 0.5 0"
-        scale="1 1 1"
-        animation="property: rotation; to: 0 360 0; loop: true; dur: 8000; easing: linear"
-        onclick="bukaInfo('Si Bebek', 'Ini adalah model GLB. Tinggal ganti dengan file pelampung.glb kamu.')"
-      >
-      </a-entity>
-      <a-cylinder
-        position="0 0.1 0"
-        radius="1"
-        height="0.2"
-        color="#222"
-      ></a-cylinder>
-
-      <a-entity position="-3 0 -3">
-        <a-torus
-          class="clickable"
-          color="orange"
-          radius="0.5"
-          radius-tubular="0.15"
-          position="0 1.5 0"
-          rotation="0 45 0"
-          onclick="bukaInfo('Pelampung Cincin', 'Pelampung standar keselamatan. Tap pada benda ini lebih mudah sekarang.')"
-        >
-        </a-torus>
-        <a-cylinder
-          position="0 0.1 0"
-          radius="0.8"
-          height="0.2"
-          color="#222"
-        ></a-cylinder>
-      </a-entity>
     </a-scene>
 
     <script>
-      /* --- 1. SETUP JOYSTICK (NIPPLE.JS) --- */
-      const joystickZone = document.getElementById("joystick-zone");
+      /* --- 1. LOGIKA LOADING (YANG DIPERBAIKI) --- */
+      const loadingScreen = document.getElementById("loading-screen");
+      const progressBar = document.getElementById("progress-bar");
+      const percentText = document.getElementById("percent-text");
 
-      // Buat Joystick
+      // Kita butuh 2 syarat untuk selesai:
+      // 1. Download file selesai (oleh LoadingManager)
+      // 2. Render 10 model selesai (oleh Counter manual)
+
+      let isDownloadComplete = false;
+      let renderedCount = 0;
+      const totalItemsToRender = 10;
+
+      // A. Monitor Download File
+      THREE.DefaultLoadingManager.onProgress = function (
+        url,
+        itemsLoaded,
+        itemsTotal
+      ) {
+        // Kita batasi progress bar download maksimal 80%, sisa 20% untuk proses render
+        const progress = (itemsLoaded / itemsTotal) * 80;
+        updateBar(progress);
+      };
+
+      THREE.DefaultLoadingManager.onLoad = function () {
+        console.log("Download Selesai. Menunggu Render...");
+        isDownloadComplete = true;
+        checkAllDone(); // Cek apakah render juga sudah selesai?
+      };
+
+      // B. Fungsi Update Bar
+      function updateBar(percent) {
+        const round = Math.round(percent);
+        progressBar.style.width = round + "%";
+        percentText.innerText = round + "%";
+      }
+
+      // C. Fungsi Cek Final
+      function checkAllDone() {
+        // Hitung persentase render (dari 80% ke 100%)
+        const renderProgress = (renderedCount / totalItemsToRender) * 20;
+        const totalProgress = 80 + renderProgress; // 80 basis download + progres render
+
+        // Jika file sudah didownload, kita update bar berdasarkan jumlah render
+        if (isDownloadComplete) {
+          updateBar(totalProgress);
+        }
+
+        // Syarat HILANGKAN OVERLAY: Download beres DAN 10 model sudah ter-load
+        if (isDownloadComplete && renderedCount >= totalItemsToRender) {
+          console.log("SEMUA SIAP! Membuka pameran...");
+          setTimeout(() => {
+            loadingScreen.style.opacity = "0";
+            setTimeout(() => {
+              loadingScreen.style.display = "none";
+            }, 1000);
+          }, 500);
+        }
+      }
+
+      /* --- 2. GENERATE ITEM + DETEKSI RENDER --- */
+      const scene = document.getElementById("main-scene");
+
+      function generatePameran() {
+        const jumlahItem = totalItemsToRender; // Harus sama dengan 10
+
+        for (let i = 0; i < jumlahItem; i++) {
+          const container = document.createElement("a-entity");
+          const randomX = Math.random() * 30 - 15;
+          const randomZ = Math.random() * 30 - 15;
+          container.setAttribute("position", `${randomX} 0 ${randomZ}`);
+
+          const model = document.createElement("a-entity");
+          model.setAttribute("gltf-model", "#model-bebek");
+          model.setAttribute("class", "clickable");
+          model.setAttribute("position", "0 0.5 0");
+          model.setAttribute(
+            "animation",
+            "property: rotation; to: 0 360 0; loop: true; dur: 8000; easing: linear"
+          );
+          model.setAttribute(
+            "onclick",
+            `bukaInfo('Koleksi #${i + 1}', 'Item ke-${i + 1}')`
+          );
+
+          // --- INI KUNCI PERBAIKANNYA ---
+          // Setiap kali satu model selesai dirender, event ini jalan
+          model.addEventListener("model-loaded", function () {
+            renderedCount++;
+            console.log(`Model ke-${renderedCount} selesai dirender.`);
+            checkAllDone(); // Cek apakah sudah semua?
+          });
+          // ------------------------------
+
+          const alas = document.createElement("a-cylinder");
+          alas.setAttribute("radius", "1");
+          alas.setAttribute("height", "0.2");
+          alas.setAttribute("color", "#444");
+          alas.setAttribute("position", "0 0.1 0");
+
+          container.appendChild(model);
+          container.appendChild(alas);
+          scene.appendChild(container);
+        }
+      }
+
+      // Jalankan generate
+      generatePameran();
+
+      /* --- 3. JOYSTICK & INTERAKSI (Tetap Sama) --- */
+      const joystickZone = document.getElementById("joystick-zone");
       const manager = nipplejs.create({
         zone: joystickZone,
         mode: "static",
@@ -163,73 +278,51 @@
         size: 100,
       });
 
-      /* --- 2. LOGIKA PERGERAKAN --- */
-      let moveData = { x: 0, y: 0 }; // Menyimpan data arah joystick
+      let moveData = { x: 0, y: 0 };
       let isMoving = false;
-      const speed = 0.1; // Kecepatan jalan
+      const speed = 0.1;
+      const rig = document.getElementById("rig");
+      const camera = document.getElementById("camera");
 
-      // Saat Joystick Digerakkan
       manager.on("move", function (evt, data) {
         if (data && data.vector) {
-          moveData.x = data.vector.x; // Kiri-Kanan
-          moveData.y = data.vector.y; // Maju-Mundur
+          moveData.x = data.vector.x;
+          moveData.y = data.vector.y;
           isMoving = true;
         }
       });
-
-      // Saat Joystick Dilepas
       manager.on("end", function () {
         isMoving = false;
         moveData = { x: 0, y: 0 };
       });
 
-      // Loop Game (Dijalankan setiap frame layar)
-      const rig = document.getElementById("rig");
-      const camera = document.getElementById("camera");
-
       function gameLoop() {
         if (isMoving) {
-          // 1. Ambil arah hadap kamera (rotasi Y)
           const rotation = camera.getAttribute("rotation");
-          const angleRad = rotation.y * (Math.PI / 180); // Ubah ke radian
-
-          // 2. Hitung matematika pergerakan (Sin/Cos)
-          // Maju Mundur (Y Joystick)
+          const angleRad = rotation.y * (Math.PI / 180);
           const dx = Math.sin(angleRad) * -moveData.y * speed;
           const dz = Math.cos(angleRad) * -moveData.y * speed;
-
-          // Geser Kiri Kanan (X Joystick) - optional, biar kayak game FPS
           const sx = Math.cos(angleRad) * moveData.x * speed;
           const sz = Math.sin(angleRad) * -moveData.x * speed;
-
-          // 3. Terapkan ke posisi Rig
           rig.object3D.position.x += dx + sx;
           rig.object3D.position.z += dz + sz;
         }
         requestAnimationFrame(gameLoop);
       }
-
-      // Jalankan Loop
       gameLoop();
 
-      /* --- 3. INTERAKSI KLIK --- */
       const infoOverlay = document.getElementById("info-overlay");
       const titleEl = document.getElementById("info-title");
       const descEl = document.getElementById("info-desc");
 
-      // Fungsi Global untuk dipanggil di HTML onclick=""
       window.bukaInfo = function (judul, deskripsi) {
-        // Animasi kecil biar kerasa ngeklik
         titleEl.innerText = judul;
         descEl.innerText = deskripsi;
         infoOverlay.style.display = "block";
       };
-
       window.tutupInfo = function () {
         infoOverlay.style.display = "none";
       };
-
-      // Mencegah Joystick menggerakkan kamera A-Frame
       joystickZone.addEventListener(
         "touchmove",
         function (e) {
@@ -240,4 +333,3 @@
     </script>
   </body>
 </html>
-  
