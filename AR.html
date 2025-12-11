@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AR Scanner 3D - Pattern Marker</title>
+
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        overflow-x: hidden;
+      }
+
+      /* Landing Page */
+      #landing {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        transition: opacity 0.5s ease;
+      }
+
+      #landing.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .landing-content {
+        text-align: center;
+        color: white;
+        padding: 20px;
+        max-width: 600px;
+      }
+
+      .landing-content h1 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .landing-content p {
+        font-size: 1.2em;
+        margin-bottom: 30px;
+        opacity: 0.9;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        padding: 15px 30px;
+        font-size: 1.1em;
+        border: none;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-primary {
+        background: white;
+        color: #667eea;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid white;
+      }
+
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-3px);
+      }
+
+      /* Marker Gallery Modal */
+      #marker-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      #marker-modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        max-width: 900px;
+        width: 100%;
+        position: relative;
+      }
+
+      .close-modal {
+        position: absolute;
+        top: 15px;
+        right: 20px;
+        font-size: 30px;
+        cursor: pointer;
+        color: #666;
+        background: none;
+        border: none;
+      }
+
+      .close-modal:hover {
+        color: #333;
+      }
+
+      .modal-content h2 {
+        color: #667eea;
+        margin-bottom: 10px;
+      }
+
+      .modal-content .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 1em;
+      }
+
+      .marker-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .marker-item {
+        text-align: center;
+        padding: 20px;
+        border: 2px solid #eee;
+        border-radius: 15px;
+        transition: all 0.3s ease;
+        background: #fafafa;
+      }
+
+      .marker-item:hover {
+        border-color: #667eea;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        transform: translateY(-5px);
+      }
+
+      .marker-item h3 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+      }
+
+      .marker-item p {
+        color: #666;
+        font-size: 0.9em;
+        margin-bottom: 15px;
+      }
+
+      .marker-preview {
+        width: 100%;
+        height: 200px;
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .marker-preview img {
+        max-width: 90%;
+        max-height: 90%;
+      }
+
+      .download-btn {
+        padding: 10px 20px;
+        background: #667eea;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: all 0.3s ease;
+      }
+
+      .download-btn:hover {
+        background: #5568d3;
+        transform: scale(1.05);
+      }
+
+      .info-box {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+
+      .info-box strong {
+        color: #1976d2;
+      }
+
+      /* AR Scanner */
+      #ar-container {
+        display: none;
+        width: 100%;
+        height: 100vh;
+      }
+
+      #ar-container.active {
+        display: block;
+      }
+
+      .ar-overlay {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 30px;
+        z-index: 1000;
+        font-size: 1em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #4caf50;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .back-btn {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 25px;
+        cursor: pointer;
+        z-index: 1000;
+        font-size: 1em;
+      }
+
+      .back-btn:hover {
+        background: rgba(0, 0, 0, 0.95);
+      }
+
+      .instructions {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+        font-size: 0.9em;
+      }
+
+      .instructions ul {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      .instructions li {
+        padding: 8px 0;
+        padding-left: 25px;
+        position: relative;
+      }
+
+      .instructions li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #4caf50;
+        font-weight: bold;
+      }
+
+      @media (max-width: 768px) {
+        .landing-content h1 {
+          font-size: 2em;
+        }
+        .btn-group {
+          flex-direction: column;
+        }
+        .marker-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Landing Page -->
+    <div id="landing">
+      <div class="landing-content">
+        <h1>📱 AR Scanner 3D</h1>
+        <p>Scan marker untuk melihat model 3D dalam Augmented Reality</p>
+
+        <div class="instructions">
+          <ul>
+            <li>Lihat dan download marker yang tersedia</li>
+            <li>Cetak marker atau tampilkan di layar lain</li>
+            <li>Scan dengan kamera untuk melihat 3D model</li>
+            <li>Setiap marker menampilkan animasi berbeda</li>
+          </ul>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="startScanner()">
+            📷 Mulai Scan AR
+          </button>
+          <button class="btn btn-secondary" onclick="openMarkerGallery()">
+            🎯 Lihat Marker
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Marker Gallery Modal -->
+    <div id="marker-modal">
+      <div class="modal-content">
+        <button class="close-modal" onclick="closeMarkerGallery()">×</button>
+        <h2>🎯 AR Marker Gallery</h2>
+        <p class="subtitle">Download marker di bawah ini untuk di-scan</p>
+
+        <div class="info-box">
+          <strong>💡 Cara Pakai:</strong> Download dan print marker, atau
+          tampilkan di layar lain. Kemudian gunakan tombol "Mulai Scan AR" untuk
+          memindai marker.
+        </div>
+
+        <div class="marker-grid">
+          <div class="marker-item">
+            <h3>Marker Hiro</h3>
+            <p>Rotasi 360° terus menerus</p>
+            <div class="marker-preview">
+              <img
+                src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
+                alt="Hiro Marker"
+              />
+            </div>
+            <button
+              class="download-btn"
+              onclick="downloadMarker('https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png', 'marker-hiro')"
+            >
+              💾 Download Marker
+            </button>
+          </div>
+
+          <div class="marker-item">
+            <h3>Marker Kanji</h3>
+            <p>Animasi naik-turun</p>
+            <div class="marker-preview">
+              <img
+                src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/kanji.png"
+                alt="Kanji Marker"
+              />
+            </div>
+            <button
+              class="download-btn"
+              onclick="downloadMarker('https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/kanji.png', 'marker-kanji')"
+            >
+              💾 Download Marker
+            </button>
+          </div>
+
+          <div class="marker-item">
+            <h3>Custom Pattern 1</h3>
+            <p>Scaling besar-kecil</p>
+            <div class="marker-preview">
+              <div
+                style="
+                  width: 180px;
+                  height: 180px;
+                  border: 8px solid black;
+                  background: white;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <div
+                  style="
+                    width: 100px;
+                    height: 100px;
+                    background: black;
+                    border-radius: 50%;
+                  "
+                ></div>
+              </div>
+            </div>
+            <button
+              class="download-btn"
+              onclick="alert('Gunakan marker Hiro atau Kanji untuk demo ini')"
+            >
+              💾 Download Marker
+            </button>
+          </div>
+
+          <div class="marker-item">
+            <h3>Custom Pattern 2</h3>
+            <p>Rotasi miring dinamis</p>
+            <div class="marker-preview">
+              <div
+                style="
+                  width: 180px;
+                  height: 180px;
+                  border: 8px solid black;
+                  background: white;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <div
+                  style="
+                    width: 100px;
+                    height: 100px;
+                    background: black;
+                    transform: rotate(45deg);
+                  "
+                ></div>
+              </div>
+            </div>
+            <button
+              class="download-btn"
+              onclick="alert('Gunakan marker Hiro atau Kanji untuk demo ini')"
+            >
+              💾 Download Marker
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AR Scanner -->
+    <div id="ar-container">
+      <button class="back-btn" onclick="backToHome()">← Kembali</button>
+
+      <div class="ar-overlay">
+        <span class="status-dot"></span>
+        <span id="status-text">Arahkan kamera ke marker</span>
+      </div>
+
+      <a-scene
+        id="ar-scene"
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; trackingMethod: best;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; precision: medium;"
+      >
+        <!-- MARKER HIRO: Rotasi 360° -->
+        <a-marker preset="hiro">
+          <a-box
+            position="0 0.5 0"
+            material="color: #FF5252;"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"
+          >
+            <a-text
+              value="Marker Hiro"
+              position="0 1.5 0"
+              align="center"
+              color="#FFFFFF"
+              scale="2 2 2"
+            ></a-text>
+          </a-box>
+        </a-marker>
+
+        <!-- MARKER KANJI: Naik-Turun -->
+        <a-marker preset="kanji">
+          <a-sphere
+            radius="0.5"
+            position="0 0.5 0"
+            material="color: #2196F3;"
+            animation="property: position; to: 0 1.5 0; dur: 2000; easing: easeInOutQuad; loop: true; dir: alternate"
+          >
+            <a-text
+              value="Marker Kanji"
+              position="0 1.5 0"
+              align="center"
+              color="#FFFFFF"
+              scale="2 2 2"
+            ></a-text>
+          </a-sphere>
+        </a-marker>
+
+        <a-entity camera></a-entity>
+      </a-scene>
+    </div>
+
+    <script>
+      // Download Marker
+      function downloadMarker(url, filename) {
+        fetch(url)
+          .then((resp) => resp.blob())
+          .then((blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = filename + ".png";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+          })
+          .catch(() =>
+            alert(
+              'Download gagal. Coba klik kanan pada gambar dan "Save Image As"'
+            )
+          );
+      }
+
+      // Open Marker Gallery
+      function openMarkerGallery() {
+        document.getElementById("marker-modal").classList.add("active");
+      }
+
+      // Close Marker Gallery
+      function closeMarkerGallery() {
+        document.getElementById("marker-modal").classList.remove("active");
+      }
+
+      // Start Scanner
+      async function startScanner() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
+          });
+
+          stream.getTracks().forEach((track) => track.stop());
+
+          document.getElementById("landing").classList.add("hidden");
+          document.getElementById("ar-container").classList.add("active");
+
+          setTimeout(() => {
+            const scene = document.querySelector("a-scene");
+            if (scene && scene.hasLoaded) {
+              console.log("✅ AR Scene loaded");
+            }
+          }, 1000);
+        } catch (error) {
+          alert(
+            "❌ Izin kamera diperlukan untuk AR Scanner.\n\nSilakan izinkan akses kamera di pengaturan browser."
+          );
+          console.error("Camera error:", error);
+        }
+      }
+
+      // Back to Home
+      function backToHome() {
+        document.getElementById("ar-container").classList.remove("active");
+        document.getElementById("landing").classList.remove("hidden");
+      }
+
+      // Marker Detection
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => {
+          const markers = document.querySelectorAll("a-marker");
+          markers.forEach((marker, index) => {
+            marker.addEventListener("markerFound", () => {
+              console.log(`✅ Marker ${index + 1} detected!`);
+              const statusText = document.getElementById("status-text");
+              if (statusText) {
+                statusText.textContent = `Marker ${
+                  index === 0 ? "Hiro" : "Kanji"
+                } terdeteksi!`;
+              }
+            });
+
+            marker.addEventListener("markerLost", () => {
+              console.log(`❌ Marker ${index + 1} lost`);
+              const statusText = document.getElementById("status-text");
+              if (statusText) {
+                statusText.textContent = "Arahkan kamera ke marker";
+              }
+            });
+          });
+        }, 2000);
+      });
+
+      // Close modal on outside click
+      document.getElementById("marker-modal").addEventListener("click", (e) => {
+        if (e.target.id === "marker-modal") {
+          closeMarkerGallery();
+        }
+      });
+    </script>
+  </body>
+</html>
