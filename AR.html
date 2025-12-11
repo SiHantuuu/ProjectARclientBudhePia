@@ -3,11 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AR Scanner MindAR - Image Tracking</title>
+    <title>AR Scanner - Custom 3D Models</title>
 
-    <!-- MindAR Libraries -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
     <style>
       * {
@@ -203,6 +202,11 @@
         position: relative;
       }
 
+      .marker-preview img {
+        max-width: 90%;
+        max-height: 90%;
+      }
+
       .download-btn {
         padding: 10px 20px;
         background: #667eea;
@@ -231,12 +235,27 @@
         color: #1976d2;
       }
 
+      .config-box {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+        font-size: 0.9em;
+      }
+
+      .config-box code {
+        background: #f5f5f5;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+      }
+
       /* AR Scanner */
       #ar-container {
         display: none;
         width: 100%;
         height: 100vh;
-        position: relative;
       }
 
       #ar-container.active {
@@ -339,15 +358,15 @@
     <!-- Landing Page -->
     <div id="landing">
       <div class="landing-content">
-        <h1>🎯 AR Scanner MindAR</h1>
-        <p>Scan 3 image markers untuk melihat model 3D berbeda!</p>
+        <h1>🎮 AR Scanner 3D Models</h1>
+        <p>Scan marker untuk melihat 3 model 3D berbeda!</p>
 
         <div class="instructions">
           <ul>
-            <li>Download 3 marker di bawah (Square, Triangle, Circle)</li>
-            <li>Cetak atau tampilkan marker di layar lain</li>
-            <li>Klik "Mulai Scan AR" dan arahkan kamera ke marker</li>
-            <li>Setiap marker punya animasi unik!</li>
+            <li>Download marker Hiro dan Kanji</li>
+            <li>Cetak atau tampilkan di layar lain</li>
+            <li>Scan dengan kamera untuk melihat model 3D</li>
+            <li>Setiap marker menampilkan model berbeda</li>
           </ul>
         </div>
 
@@ -356,7 +375,7 @@
             📷 Mulai Scan AR
           </button>
           <button class="btn btn-secondary" onclick="openMarkerGallery()">
-            🖼️ Download Markers
+            🎯 Lihat Marker
           </button>
         </div>
       </div>
@@ -366,60 +385,86 @@
     <div id="marker-modal">
       <div class="modal-content">
         <button class="close-modal" onclick="closeMarkerGallery()">×</button>
-        <h2>🖼️ Image Markers Gallery</h2>
-        <p class="subtitle">Download ketiga marker untuk AR tracking</p>
+        <h2>🎯 AR Marker Gallery</h2>
+        <p class="subtitle">Download marker di bawah ini untuk di-scan</p>
 
         <div class="info-box">
-          <strong>💡 Tips:</strong> Pastikan pencahayaan cukup terang dan marker
-          terlihat jelas oleh kamera. Jarak ideal: 20-50cm dari kamera.
+          <strong>💡 Cara Pakai:</strong> Download dan print marker, atau
+          tampilkan di layar lain. Kemudian gunakan tombol "Mulai Scan AR" untuk
+          memindai marker dan lihat model 3D muncul!
+        </div>
+
+        <div class="config-box">
+          <strong>⚙️ Ganti Model GLB:</strong><br />
+          Upload model .glb kamu ke GitHub, lalu ganti URL di bagian:<br />
+          <code>gltf-model="url(LINK_MODEL_KAMU.glb)"</code>
         </div>
 
         <div class="marker-grid">
           <div class="marker-item">
-            <h3>⬛ Square Marker</h3>
-            <p>Animasi: Rotasi 360° kontinyu</p>
-            <div class="marker-preview" style="background: #f0f0f0">
-              <div style="width: 150px; height: 150px; background: black"></div>
+            <h3>Marker Hiro</h3>
+            <p>🦊 Model: Animated Fox</p>
+            <div class="marker-preview">
+              <img
+                src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
+                alt="Hiro Marker"
+              />
             </div>
-            <button class="download-btn" onclick="downloadMarker('square')">
-              💾 Download Square
+            <button
+              class="download-btn"
+              onclick="downloadMarker('https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png', 'marker-hiro')"
+            >
+              💾 Download Marker
             </button>
           </div>
 
           <div class="marker-item">
-            <h3>🔺 Triangle Marker</h3>
-            <p>Animasi: Naik-turun bouncing</p>
-            <div class="marker-preview" style="background: #f0f0f0">
-              <div
-                style="
-                  width: 0;
-                  height: 0;
-                  border-left: 75px solid transparent;
-                  border-right: 75px solid transparent;
-                  border-bottom: 130px solid black;
-                "
-              ></div>
+            <h3>Marker Kanji</h3>
+            <p>🤖 Model: Robot Character</p>
+            <div class="marker-preview">
+              <img
+                src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/kanji.png"
+                alt="Kanji Marker"
+              />
             </div>
-            <button class="download-btn" onclick="downloadMarker('triangle')">
-              💾 Download Triangle
+            <button
+              class="download-btn"
+              onclick="downloadMarker('https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/kanji.png', 'marker-kanji')"
+            >
+              💾 Download Marker
             </button>
           </div>
 
           <div class="marker-item">
-            <h3>⚫ Circle Marker</h3>
-            <p>Animasi: Scaling pulse</p>
-            <div class="marker-preview" style="background: #f0f0f0">
+            <h3>Marker Pattern A</h3>
+            <p>🎨 Model: 3D Art Object</p>
+            <div class="marker-preview">
               <div
                 style="
-                  width: 150px;
-                  height: 150px;
-                  background: black;
-                  border-radius: 50%;
+                  width: 180px;
+                  height: 180px;
+                  border: 8px solid black;
+                  background: white;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
                 "
-              ></div>
+              >
+                <div
+                  style="
+                    width: 100px;
+                    height: 100px;
+                    background: black;
+                    border-radius: 50%;
+                  "
+                ></div>
+              </div>
             </div>
-            <button class="download-btn" onclick="downloadMarker('circle')">
-              💾 Download Circle
+            <button
+              class="download-btn"
+              onclick="alert('Gunakan marker Hiro atau Kanji untuk demo ini')"
+            >
+              💾 Download Marker
             </button>
           </div>
         </div>
@@ -432,123 +477,117 @@
 
       <div class="ar-overlay">
         <span class="status-dot"></span>
-        <span id="status-text">Arahkan kamera ke marker...</span>
+        <span id="status-text">Arahkan kamera ke marker</span>
       </div>
 
       <a-scene
-        mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/SiHantuuu/ProjectARclientBudhePia@main/targets.mind; filterMinCF:0.0001; filterBeta: 0.001; maxTrack: 3;"
-        color-space="sRGB"
-        renderer="colorManagement: true, physicallyCorrectLights"
+        id="ar-scene"
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
         vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; precision: medium;"
       >
         <a-assets>
+          <!-- Model GLB 1: Animated Fox -->
           <a-asset-item
-            id="avatarModel"
-            src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/softmind/scene.gltf"
+            id="model1"
+            src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb"
+          ></a-asset-item>
+
+          <!-- Model GLB 2: Animated Robot -->
+          <a-asset-item
+            id="model2"
+            src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"
+          ></a-asset-item>
+
+          <!-- Model GLB 3: Duck -->
+          <a-asset-item
+            id="model3"
+            src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb"
           ></a-asset-item>
         </a-assets>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-        <!-- TARGET 0: SQUARE - Rotasi 360° -->
-        <a-entity mindar-image-target="targetIndex: 0">
-          <a-box
+        <!-- MARKER HIRO: Model Fox -->
+        <a-marker preset="hiro" id="marker-hiro">
+          <a-entity
+            gltf-model="#model1"
+            scale="0.3 0.3 0.3"
             position="0 0 0"
-            scale="0.8 0.8 0.8"
-            material="color: #FF5252; metalness: 0.5; roughness: 0.3;"
-            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"
+            rotation="0 0 0"
+            animation-mixer="clip: *; loop: repeat"
           >
-          </a-box>
+          </a-entity>
           <a-text
-            value="SQUARE"
-            position="0 1.2 0"
-            align="center"
-            color="#FFFFFF"
-            scale="2 2 2"
-            look-at="#camera"
-          ></a-text>
-        </a-entity>
-
-        <!-- TARGET 1: TRIANGLE - Naik Turun -->
-        <a-entity mindar-image-target="targetIndex: 1">
-          <a-cone
-            position="0 0 0"
-            scale="0.6 0.8 0.6"
-            material="color: #2196F3; metalness: 0.5; roughness: 0.3;"
-            animation="property: position; to: 0 0.8 0; dur: 1500; easing: easeInOutQuad; loop: true; dir: alternate"
-          >
-          </a-cone>
-          <a-text
-            value="TRIANGLE"
+            value="Fox Model"
             position="0 1.5 0"
             align="center"
-            color="#FFFFFF"
+            color="#FF5722"
             scale="2 2 2"
-            look-at="#camera"
           ></a-text>
-        </a-entity>
+        </a-marker>
 
-        <!-- TARGET 2: CIRCLE - Scaling Pulse -->
-        <a-entity mindar-image-target="targetIndex: 2">
-          <a-sphere
+        <!-- MARKER KANJI: Model Robot -->
+        <a-marker preset="kanji" id="marker-kanji">
+          <a-entity
+            gltf-model="#model2"
+            scale="0.8 0.8 0.8"
             position="0 0 0"
-            radius="0.5"
-            material="color: #4CAF50; metalness: 0.5; roughness: 0.3;"
-            animation="property: scale; to: 1.3 1.3 1.3; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
+            rotation="0 0 0"
+            animation-mixer="clip: *; loop: repeat"
           >
-          </a-sphere>
+          </a-entity>
           <a-text
-            value="CIRCLE"
-            position="0 1.2 0"
+            value="Robot Model"
+            position="0 2 0"
             align="center"
-            color="#FFFFFF"
+            color="#2196F3"
             scale="2 2 2"
-            look-at="#camera"
           ></a-text>
-        </a-entity>
+        </a-marker>
+
+        <!-- MARKER PATTERN (Barcode): Model Duck -->
+        <a-marker type="barcode" value="0" id="marker-barcode">
+          <a-entity
+            gltf-model="#model3"
+            scale="1 1 1"
+            position="0 0 0"
+            rotation="0 0 0"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"
+          >
+          </a-entity>
+          <a-text
+            value="Duck Model"
+            position="0 1.5 0"
+            align="center"
+            color="#4CAF50"
+            scale="2 2 2"
+          ></a-text>
+        </a-marker>
+
+        <a-entity camera></a-entity>
       </a-scene>
     </div>
 
     <script>
-      // Download Markers (Canvas-based)
-      function downloadMarker(type) {
-        const canvas = document.createElement("canvas");
-        canvas.width = 512;
-        canvas.height = 512;
-        const ctx = canvas.getContext("2d");
-
-        // White background
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, 512, 512);
-
-        // Black shape
-        ctx.fillStyle = "black";
-
-        if (type === "square") {
-          ctx.fillRect(128, 128, 256, 256);
-        } else if (type === "triangle") {
-          ctx.beginPath();
-          ctx.moveTo(256, 100);
-          ctx.lineTo(400, 400);
-          ctx.lineTo(112, 400);
-          ctx.closePath();
-          ctx.fill();
-        } else if (type === "circle") {
-          ctx.beginPath();
-          ctx.arc(256, 256, 128, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Download
-        canvas.toBlob((blob) => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `marker-${type}.png`;
-          a.click();
-          URL.revokeObjectURL(url);
-        });
+      // Download Marker
+      function downloadMarker(url, filename) {
+        fetch(url)
+          .then((resp) => resp.blob())
+          .then((blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = filename + ".png";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+          })
+          .catch(() =>
+            alert(
+              'Download gagal. Coba klik kanan pada gambar dan "Save Image As"'
+            )
+          );
       }
 
       // Open Marker Gallery
@@ -567,42 +606,22 @@
           const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" },
           });
+
           stream.getTracks().forEach((track) => track.stop());
 
           document.getElementById("landing").classList.add("hidden");
           document.getElementById("ar-container").classList.add("active");
 
-          // Event listeners untuk deteksi marker
-          const sceneEl = document.querySelector("a-scene");
-
-          sceneEl.addEventListener("arReady", () => {
-            console.log("✅ MindAR Ready!");
-          });
-
-          sceneEl.addEventListener("arError", (e) => {
-            console.error("❌ MindAR Error:", e);
-            alert("AR Error. Pastikan targets.mind bisa diakses!");
-          });
-
-          // Listen to each target
-          const targets = document.querySelectorAll("[mindar-image-target]");
-          targets.forEach((target, index) => {
-            target.addEventListener("targetFound", () => {
-              console.log(`✅ Target ${index} found!`);
-              const names = ["SQUARE", "TRIANGLE", "CIRCLE"];
-              document.getElementById(
-                "status-text"
-              ).textContent = `${names[index]} marker terdeteksi!`;
-            });
-
-            target.addEventListener("targetLost", () => {
-              console.log(`❌ Target ${index} lost`);
-              document.getElementById("status-text").textContent =
-                "Arahkan kamera ke marker...";
-            });
-          });
+          setTimeout(() => {
+            const scene = document.querySelector("a-scene");
+            if (scene && scene.hasLoaded) {
+              console.log("✅ AR Scene loaded");
+            }
+          }, 1000);
         } catch (error) {
-          alert("❌ Izin kamera diperlukan!\n\nSilakan izinkan akses kamera.");
+          alert(
+            "❌ Izin kamera diperlukan untuk AR Scanner.\n\nSilakan izinkan akses kamera di pengaturan browser."
+          );
           console.error("Camera error:", error);
         }
       }
@@ -612,6 +631,54 @@
         document.getElementById("ar-container").classList.remove("active");
         document.getElementById("landing").classList.remove("hidden");
       }
+
+      // Marker Detection
+      document.addEventListener("DOMContentLoaded", () => {
+        setTimeout(() => {
+          const markerHiro = document.querySelector("#marker-hiro");
+          const markerKanji = document.querySelector("#marker-kanji");
+          const markerBarcode = document.querySelector("#marker-barcode");
+
+          if (markerHiro) {
+            markerHiro.addEventListener("markerFound", () => {
+              console.log("✅ Marker Hiro detected!");
+              document.getElementById("status-text").textContent =
+                "Fox Model terdeteksi! 🦊";
+            });
+            markerHiro.addEventListener("markerLost", () => {
+              console.log("❌ Marker Hiro lost");
+              document.getElementById("status-text").textContent =
+                "Arahkan kamera ke marker";
+            });
+          }
+
+          if (markerKanji) {
+            markerKanji.addEventListener("markerFound", () => {
+              console.log("✅ Marker Kanji detected!");
+              document.getElementById("status-text").textContent =
+                "Robot Model terdeteksi! 🤖";
+            });
+            markerKanji.addEventListener("markerLost", () => {
+              console.log("❌ Marker Kanji lost");
+              document.getElementById("status-text").textContent =
+                "Arahkan kamera ke marker";
+            });
+          }
+
+          if (markerBarcode) {
+            markerBarcode.addEventListener("markerFound", () => {
+              console.log("✅ Barcode Marker detected!");
+              document.getElementById("status-text").textContent =
+                "Duck Model terdeteksi! 🦆";
+            });
+            markerBarcode.addEventListener("markerLost", () => {
+              console.log("❌ Barcode Marker lost");
+              document.getElementById("status-text").textContent =
+                "Arahkan kamera ke marker";
+            });
+          }
+        }, 2000);
+      });
 
       // Close modal on outside click
       document.getElementById("marker-modal").addEventListener("click", (e) => {
