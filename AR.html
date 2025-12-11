@@ -3,10 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AR Scanner 3D - Pattern Marker</title>
+    <title>AR Scanner MindAR - Image Tracking</title>
 
+    <!-- MindAR Libraries -->
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
       * {
@@ -125,6 +126,8 @@
         max-width: 900px;
         width: 100%;
         position: relative;
+        max-height: 90vh;
+        overflow-y: auto;
       }
 
       .close-modal {
@@ -155,7 +158,7 @@
 
       .marker-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
         gap: 20px;
         margin-top: 20px;
       }
@@ -200,11 +203,6 @@
         position: relative;
       }
 
-      .marker-preview img {
-        max-width: 90%;
-        max-height: 90%;
-      }
-
       .download-btn {
         padding: 10px 20px;
         background: #667eea;
@@ -238,6 +236,7 @@
         display: none;
         width: 100%;
         height: 100vh;
+        position: relative;
       }
 
       #ar-container.active {
@@ -340,15 +339,15 @@
     <!-- Landing Page -->
     <div id="landing">
       <div class="landing-content">
-        <h1>📱 AR Scanner 3D</h1>
-        <p>Scan marker untuk melihat model 3D dalam Augmented Reality</p>
+        <h1>🎯 AR Scanner MindAR</h1>
+        <p>Scan 3 image markers untuk melihat model 3D berbeda!</p>
 
         <div class="instructions">
           <ul>
-            <li>Lihat dan download marker yang tersedia</li>
-            <li>Cetak marker atau tampilkan di layar lain</li>
-            <li>Scan dengan kamera untuk melihat 3D model</li>
-            <li>Setiap marker menampilkan animasi berbeda</li>
+            <li>Download 3 marker di bawah (Square, Triangle, Circle)</li>
+            <li>Cetak atau tampilkan marker di layar lain</li>
+            <li>Klik "Mulai Scan AR" dan arahkan kamera ke marker</li>
+            <li>Setiap marker punya animasi unik!</li>
           </ul>
         </div>
 
@@ -357,7 +356,7 @@
             📷 Mulai Scan AR
           </button>
           <button class="btn btn-secondary" onclick="openMarkerGallery()">
-            🎯 Lihat Marker
+            🖼️ Download Markers
           </button>
         </div>
       </div>
@@ -367,113 +366,60 @@
     <div id="marker-modal">
       <div class="modal-content">
         <button class="close-modal" onclick="closeMarkerGallery()">×</button>
-        <h2>🎯 AR Marker Gallery</h2>
-        <p class="subtitle">Download marker di bawah ini untuk di-scan</p>
+        <h2>🖼️ Image Markers Gallery</h2>
+        <p class="subtitle">Download ketiga marker untuk AR tracking</p>
 
         <div class="info-box">
-          <strong>💡 Cara Pakai:</strong> Download dan print marker, atau
-          tampilkan di layar lain. Kemudian gunakan tombol "Mulai Scan AR" untuk
-          memindai marker.
+          <strong>💡 Tips:</strong> Pastikan pencahayaan cukup terang dan marker
+          terlihat jelas oleh kamera. Jarak ideal: 20-50cm dari kamera.
         </div>
 
         <div class="marker-grid">
           <div class="marker-item">
-            <h3>Marker Hiro</h3>
-            <p>Rotasi 360° terus menerus</p>
-            <div class="marker-preview">
-              <img
-                src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
-                alt="Hiro Marker"
-              />
+            <h3>⬛ Square Marker</h3>
+            <p>Animasi: Rotasi 360° kontinyu</p>
+            <div class="marker-preview" style="background: #f0f0f0">
+              <div style="width: 150px; height: 150px; background: black"></div>
             </div>
-            <button
-              class="download-btn"
-              onclick="downloadMarker('https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png', 'marker-hiro')"
-            >
-              💾 Download Marker
+            <button class="download-btn" onclick="downloadMarker('square')">
+              💾 Download Square
             </button>
           </div>
 
           <div class="marker-item">
-            <h3>Marker Kanji</h3>
-            <p>Animasi naik-turun</p>
-            <div class="marker-preview">
-              <img
-                src="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/kanji.png"
-                alt="Kanji Marker"
-              />
-            </div>
-            <button
-              class="download-btn"
-              onclick="downloadMarker('https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/kanji.png', 'marker-kanji')"
-            >
-              💾 Download Marker
-            </button>
-          </div>
-
-          <div class="marker-item">
-            <h3>Custom Pattern 1</h3>
-            <p>Scaling besar-kecil</p>
-            <div class="marker-preview">
+            <h3>🔺 Triangle Marker</h3>
+            <p>Animasi: Naik-turun bouncing</p>
+            <div class="marker-preview" style="background: #f0f0f0">
               <div
                 style="
-                  width: 180px;
-                  height: 180px;
-                  border: 8px solid black;
-                  background: white;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
+                  width: 0;
+                  height: 0;
+                  border-left: 75px solid transparent;
+                  border-right: 75px solid transparent;
+                  border-bottom: 130px solid black;
                 "
-              >
-                <div
-                  style="
-                    width: 100px;
-                    height: 100px;
-                    background: black;
-                    border-radius: 50%;
-                  "
-                ></div>
-              </div>
+              ></div>
             </div>
-            <button
-              class="download-btn"
-              onclick="alert('Gunakan marker Hiro atau Kanji untuk demo ini')"
-            >
-              💾 Download Marker
+            <button class="download-btn" onclick="downloadMarker('triangle')">
+              💾 Download Triangle
             </button>
           </div>
 
           <div class="marker-item">
-            <h3>Custom Pattern 2</h3>
-            <p>Rotasi miring dinamis</p>
-            <div class="marker-preview">
+            <h3>⚫ Circle Marker</h3>
+            <p>Animasi: Scaling pulse</p>
+            <div class="marker-preview" style="background: #f0f0f0">
               <div
                 style="
-                  width: 180px;
-                  height: 180px;
-                  border: 8px solid black;
-                  background: white;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
+                  width: 150px;
+                  height: 150px;
+                  background: black;
+                  border-radius: 50%;
                 "
-              >
-                <div
-                  style="
-                    width: 100px;
-                    height: 100px;
-                    background: black;
-                    transform: rotate(45deg);
-                  "
-                ></div>
-              </div>
+              ></div>
             </div>
-            <button
-              class="download-btn"
-              onclick="alert('Gunakan marker Hiro atau Kanji untuk demo ini')"
-            >
-              💾 Download Marker
+            <button class="download-btn" onclick="downloadMarker('circle')">
+              💾 Download Circle
             </button>
           </div>
         </div>
@@ -486,75 +432,123 @@
 
       <div class="ar-overlay">
         <span class="status-dot"></span>
-        <span id="status-text">Arahkan kamera ke marker</span>
+        <span id="status-text">Arahkan kamera ke marker...</span>
       </div>
 
       <a-scene
-        id="ar-scene"
-        embedded
-        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; trackingMethod: best;"
+        mindar-image="imageTargetSrc: https://raw.githubusercontent.com/SiHantuuu/ProjectARclientBudhePia/main/targets.mind; filterMinCF:0.0001; filterBeta: 0.001;"
+        color-space="sRGB"
+        renderer="colorManagement: true, physicallyCorrectLights"
         vr-mode-ui="enabled: false"
-        renderer="logarithmicDepthBuffer: true; precision: medium;"
+        device-orientation-permission-ui="enabled: false"
       >
-        <!-- MARKER HIRO: Rotasi 360° -->
-        <a-marker preset="hiro">
+        <a-assets>
+          <a-asset-item
+            id="avatarModel"
+            src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/softmind/scene.gltf"
+          ></a-asset-item>
+        </a-assets>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <!-- TARGET 0: SQUARE - Rotasi 360° -->
+        <a-entity mindar-image-target="targetIndex: 0">
           <a-box
-            position="0 0.5 0"
-            material="color: #FF5252;"
+            position="0 0 0"
+            scale="0.8 0.8 0.8"
+            material="color: #FF5252; metalness: 0.5; roughness: 0.3;"
             animation="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"
           >
-            <a-text
-              value="Marker Hiro"
-              position="0 1.5 0"
-              align="center"
-              color="#FFFFFF"
-              scale="2 2 2"
-            ></a-text>
           </a-box>
-        </a-marker>
+          <a-text
+            value="SQUARE"
+            position="0 1.2 0"
+            align="center"
+            color="#FFFFFF"
+            scale="2 2 2"
+            look-at="#camera"
+          ></a-text>
+        </a-entity>
 
-        <!-- MARKER KANJI: Naik-Turun -->
-        <a-marker preset="kanji">
-          <a-sphere
-            radius="0.5"
-            position="0 0.5 0"
-            material="color: #2196F3;"
-            animation="property: position; to: 0 1.5 0; dur: 2000; easing: easeInOutQuad; loop: true; dir: alternate"
+        <!-- TARGET 1: TRIANGLE - Naik Turun -->
+        <a-entity mindar-image-target="targetIndex: 1">
+          <a-cone
+            position="0 0 0"
+            scale="0.6 0.8 0.6"
+            material="color: #2196F3; metalness: 0.5; roughness: 0.3;"
+            animation="property: position; to: 0 0.8 0; dur: 1500; easing: easeInOutQuad; loop: true; dir: alternate"
           >
-            <a-text
-              value="Marker Kanji"
-              position="0 1.5 0"
-              align="center"
-              color="#FFFFFF"
-              scale="2 2 2"
-            ></a-text>
-          </a-sphere>
-        </a-marker>
+          </a-cone>
+          <a-text
+            value="TRIANGLE"
+            position="0 1.5 0"
+            align="center"
+            color="#FFFFFF"
+            scale="2 2 2"
+            look-at="#camera"
+          ></a-text>
+        </a-entity>
 
-        <a-entity camera></a-entity>
+        <!-- TARGET 2: CIRCLE - Scaling Pulse -->
+        <a-entity mindar-image-target="targetIndex: 2">
+          <a-sphere
+            position="0 0 0"
+            radius="0.5"
+            material="color: #4CAF50; metalness: 0.5; roughness: 0.3;"
+            animation="property: scale; to: 1.3 1.3 1.3; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
+          >
+          </a-sphere>
+          <a-text
+            value="CIRCLE"
+            position="0 1.2 0"
+            align="center"
+            color="#FFFFFF"
+            scale="2 2 2"
+            look-at="#camera"
+          ></a-text>
+        </a-entity>
       </a-scene>
     </div>
 
     <script>
-      // Download Marker
-      function downloadMarker(url, filename) {
-        fetch(url)
-          .then((resp) => resp.blob())
-          .then((blob) => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.style.display = "none";
-            a.href = url;
-            a.download = filename + ".png";
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-          })
-          .catch(() =>
-            alert(
-              'Download gagal. Coba klik kanan pada gambar dan "Save Image As"'
-            )
-          );
+      // Download Markers (Canvas-based)
+      function downloadMarker(type) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext("2d");
+
+        // White background
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, 512, 512);
+
+        // Black shape
+        ctx.fillStyle = "black";
+
+        if (type === "square") {
+          ctx.fillRect(128, 128, 256, 256);
+        } else if (type === "triangle") {
+          ctx.beginPath();
+          ctx.moveTo(256, 100);
+          ctx.lineTo(400, 400);
+          ctx.lineTo(112, 400);
+          ctx.closePath();
+          ctx.fill();
+        } else if (type === "circle") {
+          ctx.beginPath();
+          ctx.arc(256, 256, 128, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Download
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `marker-${type}.png`;
+          a.click();
+          URL.revokeObjectURL(url);
+        });
       }
 
       // Open Marker Gallery
@@ -573,22 +567,42 @@
           const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" },
           });
-
           stream.getTracks().forEach((track) => track.stop());
 
           document.getElementById("landing").classList.add("hidden");
           document.getElementById("ar-container").classList.add("active");
 
-          setTimeout(() => {
-            const scene = document.querySelector("a-scene");
-            if (scene && scene.hasLoaded) {
-              console.log("✅ AR Scene loaded");
-            }
-          }, 1000);
+          // Event listeners untuk deteksi marker
+          const sceneEl = document.querySelector("a-scene");
+
+          sceneEl.addEventListener("arReady", () => {
+            console.log("✅ MindAR Ready!");
+          });
+
+          sceneEl.addEventListener("arError", (e) => {
+            console.error("❌ MindAR Error:", e);
+            alert("AR Error. Pastikan targets.mind bisa diakses!");
+          });
+
+          // Listen to each target
+          const targets = document.querySelectorAll("[mindar-image-target]");
+          targets.forEach((target, index) => {
+            target.addEventListener("targetFound", () => {
+              console.log(`✅ Target ${index} found!`);
+              const names = ["SQUARE", "TRIANGLE", "CIRCLE"];
+              document.getElementById(
+                "status-text"
+              ).textContent = `${names[index]} marker terdeteksi!`;
+            });
+
+            target.addEventListener("targetLost", () => {
+              console.log(`❌ Target ${index} lost`);
+              document.getElementById("status-text").textContent =
+                "Arahkan kamera ke marker...";
+            });
+          });
         } catch (error) {
-          alert(
-            "❌ Izin kamera diperlukan untuk AR Scanner.\n\nSilakan izinkan akses kamera di pengaturan browser."
-          );
+          alert("❌ Izin kamera diperlukan!\n\nSilakan izinkan akses kamera.");
           console.error("Camera error:", error);
         }
       }
@@ -598,32 +612,6 @@
         document.getElementById("ar-container").classList.remove("active");
         document.getElementById("landing").classList.remove("hidden");
       }
-
-      // Marker Detection
-      document.addEventListener("DOMContentLoaded", () => {
-        setTimeout(() => {
-          const markers = document.querySelectorAll("a-marker");
-          markers.forEach((marker, index) => {
-            marker.addEventListener("markerFound", () => {
-              console.log(`✅ Marker ${index + 1} detected!`);
-              const statusText = document.getElementById("status-text");
-              if (statusText) {
-                statusText.textContent = `Marker ${
-                  index === 0 ? "Hiro" : "Kanji"
-                } terdeteksi!`;
-              }
-            });
-
-            marker.addEventListener("markerLost", () => {
-              console.log(`❌ Marker ${index + 1} lost`);
-              const statusText = document.getElementById("status-text");
-              if (statusText) {
-                statusText.textContent = "Arahkan kamera ke marker";
-              }
-            });
-          });
-        }, 2000);
-      });
 
       // Close modal on outside click
       document.getElementById("marker-modal").addEventListener("click", (e) => {
