@@ -2,8 +2,11 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MES Simulation – Final Scene 1, 2, & 3</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>MES Simulation – Mobile Support</title>
 
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
@@ -15,6 +18,7 @@
         overflow: hidden;
         font-family: sans-serif;
         user-select: none;
+        -webkit-user-select: none; /* Safari */
       }
 
       /* UI ELEMENTS */
@@ -31,6 +35,7 @@
         align-items: center;
         justify-content: center;
         color: white;
+        text-align: center;
       }
       #start-btn {
         padding: 20px 50px;
@@ -41,11 +46,6 @@
         cursor: pointer;
         font-weight: bold;
         margin-top: 20px;
-        transition: 0.3s;
-      }
-      #start-btn:hover {
-        background: white;
-        transform: scale(1.1);
       }
 
       #info-overlay {
@@ -75,6 +75,7 @@
         font-size: 16px;
       }
 
+      /* PC HUD */
       #controls-hud {
         position: fixed;
         bottom: 20px;
@@ -120,6 +121,7 @@
         background: rgba(0, 0, 0, 0.7);
         padding: 5px 10px;
         border-radius: 5px;
+        width: max-content;
       }
 
       #nav-info {
@@ -134,22 +136,74 @@
         font-weight: bold;
       }
 
-      /* JOYSTICK (Mobile) */
+      /* --- MOBILE SPECIFIC CONTROLS --- */
       #joystick-zone {
         position: absolute;
         bottom: 50px;
-        right: 50px;
+        left: 30px;
         width: 120px;
         height: 120px;
         z-index: 999;
-        display: none;
+        display: none; /* Default hidden on PC */
       }
-      @media (max-width: 768px) {
+
+      /* Tombol Interaksi Mobile (Hanya muncul jika di HP dan ada target) */
+      #mobile-interact-btn {
+        position: fixed;
+        bottom: 60px;
+        right: 40px;
+        width: 80px;
+        height: 80px;
+        background: rgba(0, 210, 255, 0.8);
+        border: 4px solid white;
+        border-radius: 50%;
+        color: white;
+        font-weight: bold;
+        display: none; /* Hidden by default */
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 15px #00d2ff;
+        cursor: pointer;
+      }
+      #mobile-interact-btn:active {
+        transform: scale(0.9);
+        background: #fff;
+        color: #00d2ff;
+      }
+
+      /* Tombol Ganti Scene Mobile */
+      #mobile-scene-switcher {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        display: none;
+        gap: 10px;
+        z-index: 9999;
+      }
+      .scene-btn {
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border: 1px solid #00d2ff;
+        padding: 8px 15px;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+
+      /* CSS Media Query: Jika layar kecil (HP/Tablet) */
+      @media (max-width: 1024px) {
         #joystick-zone {
           display: block;
-        }
+        } /* Munculkan Joystick */
         #controls-hud {
           display: none;
+        } /* Sembunyikan panduan WASD */
+        #mobile-scene-switcher {
+          display: flex;
+        } /* Munculkan tombol scene */
+        #nav-info {
+          font-size: 12px;
+          padding: 5px 10px;
         }
       }
     </style>
@@ -158,8 +212,8 @@
   <body>
     <div id="start-screen">
       <h1>SIMULASI MES - FINAL</h1>
-      <p>Tekan angka <b>1</b>, <b>2</b>, atau <b>3</b> untuk ganti Scene.</p>
-      <button id="start-btn">MASUK SIMULASI</button>
+      <p>Mobile Compatible</p>
+      <button id="start-btn">MULAI SIMULASI</button>
     </div>
 
     <div id="crosshair"></div>
@@ -167,10 +221,7 @@
     <div id="nav-info">Loc: Loading...</div>
 
     <div id="controls-hud">
-      <div>
-        <b>WASD</b> Gerak | <b>1-3</b> Ganti Scene | <b>KLIK</b> Cek Koordinat |
-        <b>E</b> Interaksi
-      </div>
+      <div><b>WASD</b> Gerak | <b>1-3</b> Ganti Scene | <b>E</b> Interaksi</div>
     </div>
 
     <div id="info-overlay">
@@ -181,7 +232,18 @@
 
     <div id="joystick-zone"></div>
 
-    <a-scene loading-screen="dotsColor: red; backgroundColor: black">
+    <div id="mobile-interact-btn" onclick="triggerInteraction()">👋 TEKAN</div>
+
+    <div id="mobile-scene-switcher">
+      <button class="scene-btn" onclick="loadScene(1)">1</button>
+      <button class="scene-btn" onclick="loadScene(2)">2</button>
+      <button class="scene-btn" onclick="loadScene(3)">3</button>
+    </div>
+
+    <a-scene
+      loading-screen="dotsColor: red; backgroundColor: black"
+      vr-mode-ui="enabled: false"
+    >
       <a-assets>
         <a-asset-item id="model-scene1" src="Scene 1.glb"></a-asset-item>
         <a-asset-item id="model-scene2" src="Scene 2.glb"></a-asset-item>
@@ -192,17 +254,16 @@
         <a-entity
           id="camera"
           camera
-          look-controls="pointerLockEnabled: true"
           position="0 2.7 0"
+          look-controls="pointerLockEnabled: true"
         >
           <a-entity
-            raycaster="objects: .clickable; far: 10; interval: 100"
+            raycaster="objects: .clickable; far: 4; interval: 100"
             position="0 0 -1"
             geometry="primitive: ring; radiusInner: 0.001; radiusOuter: 0.001"
             material="color: black; shader: flat"
             id="cam-ray"
-          >
-          </a-entity>
+          ></a-entity>
         </a-entity>
       </a-entity>
 
@@ -214,19 +275,10 @@
         intensity="1.5"
       ></a-light>
       <a-light type="directional" position="-2 10 4" intensity="0.5"></a-light>
-      <a-light
-        type="point"
-        color="#fff"
-        position="0 5 0"
-        intensity="0.6"
-        distance="30"
-      ></a-light>
 
       <a-entity id="scene-container-1" visible="true">
         <a-entity
           gltf-model="#model-scene1"
-          position="0 0 0"
-          scale="1 1 1"
           class="clickable collidable"
         ></a-entity>
       </a-entity>
@@ -234,8 +286,6 @@
       <a-entity id="scene-container-2" visible="false">
         <a-entity
           gltf-model="#model-scene2"
-          position="0 0 0"
-          scale="1 1 1"
           class="clickable collidable"
         ></a-entity>
       </a-entity>
@@ -243,8 +293,6 @@
       <a-entity id="scene-container-3" visible="false">
         <a-entity
           gltf-model="#model-scene3"
-          position="0 0 0"
-          scale="1 1 1"
           class="clickable collidable"
         ></a-entity>
       </a-entity>
@@ -253,6 +301,23 @@
     </a-scene>
 
     <script>
+      /* --- 0. DETEKSI MOBILE --- */
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
+
+      // Jika Mobile, matikan Pointer Lock agar layar bisa di-swipe & Joystick di posisi kiri
+      const cam = document.getElementById("camera");
+      if (isMobile) {
+        cam.setAttribute(
+          "look-controls",
+          "pointerLockEnabled: false; touchEnabled: true"
+        );
+        // Pindahkan Joystick ke kiri bawah secara default via CSS
+        document.getElementById("joystick-zone").style.left = "30px";
+      }
+
       /* --- 1. DATA CONFIGURATION --- */
       const itemDescriptions = {
         alarm: {
@@ -281,12 +346,11 @@
           d: "Rakit penolong yang sudah mengembang di air.",
         },
         tali: {
-          t: "Tali Penahan (Bowsing Line)",
-          d: "Tali ini menahan rakit agar tetap rapat dengan kapal untuk evakuasi.",
+          t: "Tali Penahan",
+          d: "Tali ini menahan rakit agar tetap rapat dengan kapal.",
         },
       };
 
-      // KONFIGURASI SCENE
       const scenes = {
         1: {
           name: "Bridge (Anjungan)",
@@ -299,7 +363,7 @@
           ],
         },
         2: {
-          name: "Scene 2 (Deck/Lobby)",
+          name: "Deck / Lobby",
           spawn: { x: -7.64, y: 6.13, z: -7.94 },
           rot: 180,
           containerId: "scene-container-2",
@@ -311,22 +375,17 @@
           ],
         },
         3: {
-          name: "Scene 3 (Evakuasi Laut)",
+          name: "Evakuasi Laut",
           spawn: { x: -7.5, y: 6.35, z: 1.94 },
           rot: 0,
           containerId: "scene-container-3",
           hitboxes: [
             { pos: "-10.30 6.84 -2.63", key: "chute" },
             { pos: "-15.35 1.24 -9.54", key: "raft", size: "3 2 3" },
-
-            // --- UPDATED TALI POSITION DARI INSPECTOR BARU ---
             {
-              // Position dari screenshot terakhir
               pos: "-11.782 7.739 -2.710",
               key: "tali",
-              // Scale dari screenshot terakhir
               size: "0.100 1.610 0.100",
-              // Rotation dari screenshot terakhir
               rot: "1.562 2.032 120.916",
             },
           ],
@@ -337,14 +396,11 @@
       let verticalVelocity = 0;
       const GRAVITY = -0.015;
 
-      /* --- 2. SCENE SWITCHER LOGIC --- */
-      function loadScene(index) {
+      /* --- 2. SCENE LOGIC --- */
+      window.loadScene = function (index) {
         if (!scenes[index]) return;
-
-        console.log("Loading Scene " + index);
         currentSceneIndex = index;
         const config = scenes[index];
-
         document.getElementById("nav-info").innerText = "Loc: " + config.name;
 
         for (let key in scenes) {
@@ -352,62 +408,45 @@
           if (el) el.setAttribute("visible", key == index);
         }
 
-        // Reset Physics
         verticalVelocity = 0;
-
-        // Pindahkan Player
         const rig = document.getElementById("rig");
         rig.object3D.position.set(
           config.spawn.x,
           config.spawn.y,
           config.spawn.z
         );
+        rig.object3D.rotation.y = (config.rot || 0) * (Math.PI / 180);
 
-        // Atur Rotasi
-        const rotationY = (config.rot || 0) * (Math.PI / 180);
-        rig.object3D.rotation.y = rotationY;
-
-        // Load Hitbox
         const hitboxContainer = document.getElementById("active-hitboxes");
         hitboxContainer.innerHTML = "";
-
         config.hitboxes.forEach((item) => {
           createHitbox(item.pos, item.key, item.size, item.rot);
         });
-      }
+      };
 
       function createHitbox(posStr, key, size = "0.5 0.5 0.5", rot = "0 0 0") {
         const el = document.createElement("a-entity");
         el.setAttribute("geometry", "primitive: box");
-
-        // Set Ukuran (Scale)
         el.setAttribute("scale", size);
-
-        // Set Rotasi
         el.setAttribute("rotation", rot);
-
-        // Set Warna: CYAN (Biru Muda) agar kontras
         el.setAttribute(
           "material",
-          "color: cyan; opacity: 0.4; transparent: true; depthTest: false"
+          "color: cyan; opacity: 0.3; transparent: true; depthTest: false"
         );
-
         el.setAttribute("position", posStr);
         el.setAttribute("class", "clickable");
         el.dataset.key = key;
         document.getElementById("active-hitboxes").appendChild(el);
       }
 
-      /* --- 3. CONTROLS --- */
+      /* --- 3. INPUTS --- */
       const keys = { w: false, a: false, s: false, d: false };
 
       window.addEventListener("keydown", (e) => {
         const k = e.key.toLowerCase();
-
         if (k === "1") loadScene(1);
         if (k === "2") loadScene(2);
         if (k === "3") loadScene(3);
-
         if (keys.hasOwnProperty(k)) keys[k] = true;
         if (k === "e" && !isPopupOpen && focusedItem) showPopup();
         if (k === "escape") closePopup();
@@ -418,39 +457,14 @@
         if (keys.hasOwnProperty(k)) keys[k] = false;
       });
 
-      /* --- 4. DEBUG KOORDINAT --- */
-      window.addEventListener("click", () => {
-        if (document.pointerLockElement) {
-          const raycasterEl = document.getElementById("cam-ray");
-          if (!raycasterEl.components.raycaster) return;
-          const intersections = raycasterEl.components.raycaster.intersections;
-
-          if (intersections.length > 0) {
-            const point = intersections[0].point;
-            const coordStr = `${point.x.toFixed(2)} ${point.y.toFixed(
-              2
-            )} ${point.z.toFixed(2)}`;
-            console.log(
-              `📍 SCENE ${currentSceneIndex} KOORDINAT: "${coordStr}"`
-            );
-            const msg = document.getElementById("interact-msg");
-            msg.style.display = "block";
-            msg.innerText = `KOORDINAT: ${coordStr}`;
-            setTimeout(() => {
-              if (msg.innerText.includes("KOORDINAT"))
-                msg.style.display = "none";
-            }, 3000);
-          }
-        }
-      });
-
-      /* --- 5. INTERACTION --- */
+      /* --- 4. INTERACTION --- */
       let focusedItem = null;
       let isPopupOpen = false;
       const popup = document.getElementById("info-overlay");
       const ray = document.getElementById("cam-ray");
       const crosshair = document.getElementById("crosshair");
       const msg = document.getElementById("interact-msg");
+      const mobileBtn = document.getElementById("mobile-interact-btn");
 
       ray.addEventListener("raycaster-intersection", (evt) => {
         if (isPopupOpen) return;
@@ -460,7 +474,12 @@
           if (focusedItem) {
             crosshair.classList.add("active");
             msg.style.display = "block";
-            msg.innerText = "TEKAN [E] : " + focusedItem.t;
+            msg.innerText = isMobile
+              ? "TEKAN TOMBOL INTERAKSI"
+              : "TEKAN [E] : " + focusedItem.t;
+
+            // Show Mobile Button
+            if (isMobile) mobileBtn.style.display = "flex";
           }
         }
       });
@@ -469,64 +488,79 @@
         focusedItem = null;
         crosshair.classList.remove("active");
         if (!msg.innerText.includes("KOORDINAT")) msg.style.display = "none";
+
+        // Hide Mobile Button
+        if (isMobile) mobileBtn.style.display = "none";
       });
 
-      function showPopup() {
+      window.showPopup = function () {
         if (!focusedItem) return;
         document.getElementById("info-title").innerText = focusedItem.t;
         document.getElementById("info-desc").innerText = focusedItem.d;
         popup.style.display = "block";
         isPopupOpen = true;
-        document.exitPointerLock();
-      }
+
+        // Lepas pointer lock agar bisa klik tombol tutup
+        if (document.pointerLockElement) document.exitPointerLock();
+      };
+
+      // Fungsi khusus untuk tombol mobile
+      window.triggerInteraction = function () {
+        if (focusedItem) showPopup();
+      };
 
       window.closePopup = function () {
         popup.style.display = "none";
         isPopupOpen = false;
+
+        // Kembalikan pointer lock jika di PC
         const sceneEl = document.querySelector("a-scene");
-        if (sceneEl.canvas) sceneEl.canvas.requestPointerLock();
+        if (!isMobile && sceneEl.canvas) sceneEl.canvas.requestPointerLock();
       };
 
-      const startBtn = document.getElementById("start-btn");
-      startBtn.addEventListener("click", function () {
-        document.getElementById("start-screen").style.display = "none";
-        loadScene(1);
-        const sceneEl = document.querySelector("a-scene");
-        if (sceneEl.canvas) sceneEl.canvas.requestPointerLock();
-      });
+      document
+        .getElementById("start-btn")
+        .addEventListener("click", function () {
+          document.getElementById("start-screen").style.display = "none";
+          loadScene(1);
+
+          // Hanya minta pointer lock jika BUKAN mobile
+          if (!isMobile) {
+            const sceneEl = document.querySelector("a-scene");
+            if (sceneEl.canvas) sceneEl.canvas.requestPointerLock();
+          }
+        });
 
       document.querySelector("a-scene").addEventListener("click", function () {
-        if (!isPopupOpen) {
+        if (!isPopupOpen && !isMobile) {
           const sceneEl = document.querySelector("a-scene");
           if (sceneEl.canvas) sceneEl.canvas.requestPointerLock();
         }
       });
 
-      /* --- 6. MOVEMENT & PHYSICS LOOP --- */
+      /* --- 5. MOVEMENT LOOP --- */
       const rig = document.getElementById("rig");
-      const cam = document.getElementById("camera");
       let joyData = null;
 
       const joyZone = document.getElementById("joystick-zone");
-      if (joyZone) {
-        const joy = nipplejs.create({
-          zone: joyZone,
-          mode: "static",
-          position: { right: "50%", bottom: "50%" },
-          color: "white",
-        });
-        joy.on("move", (e, data) => {
-          joyData = data.vector;
-        });
-        joy.on("end", () => {
-          joyData = null;
-        });
-      }
+      // Create Joystick hanya sekali
+      const joy = nipplejs.create({
+        zone: joyZone,
+        mode: "static",
+        position: { left: "50%", bottom: "50%" }, // Center in the zone
+        color: "white",
+        size: 100,
+      });
+      joy.on("move", (e, data) => {
+        joyData = data.vector;
+      });
+      joy.on("end", () => {
+        joyData = null;
+      });
 
       const direction = new THREE.Vector3();
       const side = new THREE.Vector3();
       const moveVector = new THREE.Vector3();
-
       const collisionRay = new THREE.Raycaster();
       const floorRay = new THREE.Raycaster();
       const speed = 0.15;
@@ -545,12 +579,13 @@
           if (keys.d) moveVector.sub(side);
 
           if (joyData) {
+            // Joystick Logic
             const forward = direction.clone().multiplyScalar(-joyData.y);
             const sideways = side.clone().multiplyScalar(-joyData.x);
             moveVector.add(forward).add(sideways);
           }
 
-          // COLLISION DETECTION (TEMBOK)
+          // COLLISION
           const currentContainerId = scenes[currentSceneIndex].containerId;
           const activeModel = document.querySelector(
             `#${currentContainerId} .collidable`
@@ -579,16 +614,14 @@
             rig.object3D.position.add(moveVector);
           }
 
-          // GRAVITY & FLOOR DETECTION
+          // GRAVITY
           verticalVelocity += GRAVITY;
           let onGround = false;
 
           if (activeModel && activeModel.object3D) {
             const rayOrigin = rig.object3D.position.clone();
             rayOrigin.y += 1.0;
-            const down = new THREE.Vector3(0, -1, 0);
-
-            floorRay.set(rayOrigin, down);
+            floorRay.set(rayOrigin, new THREE.Vector3(0, -1, 0));
             const floorHits = floorRay.intersectObjects(
               activeModel.object3D.children,
               true
@@ -597,8 +630,6 @@
             if (floorHits.length > 0) {
               const distanceToFloor = floorHits[0].distance;
               const floorY = floorHits[0].point.y;
-
-              // Snap ke lantai jika dekat
               if (distanceToFloor <= 1.5 && verticalVelocity <= 0) {
                 onGround = true;
                 verticalVelocity = 0;
@@ -607,14 +638,8 @@
             }
           }
 
-          if (!onGround) {
-            rig.object3D.position.y += verticalVelocity;
-          }
-
-          // RESPAWN JIKA JATUH
-          if (rig.object3D.position.y < -20) {
-            loadScene(currentSceneIndex);
-          }
+          if (!onGround) rig.object3D.position.y += verticalVelocity;
+          if (rig.object3D.position.y < -20) loadScene(currentSceneIndex);
         }
         requestAnimationFrame(loop);
       }

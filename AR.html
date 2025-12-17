@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pelampung AR - Tanpa Marker</title>
+    <title>Pelampung AR - HTTPS Required</title>
 
     <script
       type="module"
@@ -22,32 +22,34 @@
         height: 100vh;
         background-color: #2d2d2d;
       }
-      /* Desain Tombol AR */
+
+      /* Tombol AR Custom */
       #ar-button {
         position: absolute;
         bottom: 30px;
         left: 50%;
         transform: translateX(-50%);
         background-color: white;
+        color: black;
         border-radius: 25px;
         border: none;
-        padding: 10px 20px;
+        padding: 12px 24px;
         font-weight: bold;
-        box-shadow: 0px 3px 10px rgba(0, 0, 0, 0.3);
+        font-size: 16px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
         z-index: 100;
+        cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
       }
-      /* Animasi jari penunjuk (opsional) */
-      .ar-prompt {
-        position: absolute;
-        bottom: 200px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100px;
-        pointer-events: none;
-        display: none; /* Muncul otomatis dari library */
+      #ar-button:active {
+        transform: translateX(-50%) scale(0.95);
+      }
+
+      /* Sembunyikan tombol AR default bawaan model-viewer jika kita pakai custom */
+      model-viewer::part(default-ar-button) {
+        display: none;
       }
     </style>
   </head>
@@ -59,11 +61,10 @@
       camera-controls
       auto-rotate
       shadow-intensity="1"
-      scale="1 1 1"
+      ar-placement="floor"
+      ar-scale="fixed"
     >
-      <button slot="ar-button" id="ar-button">
-        👋 Tampilkan di Lantai (AR)
-      </button>
+      <button slot="ar-button" id="ar-button">📷 Mulai AR (Cari Lantai)</button>
 
       <div id="ar-prompt">
         <img
@@ -76,11 +77,20 @@
     <script>
       const modelViewer = document.querySelector("model-viewer");
 
-      // Error handling jika AR tidak support
+      // Cek apakah browser mendukung AR saat loading
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!modelViewer.canActivateAR) {
+          console.log(
+            "Perangkat ini mungkin tidak mendukung AR atau HTTPS belum aktif."
+          );
+        }
+      });
+
+      // Error handling lebih detail
       modelViewer.addEventListener("ar-status", (event) => {
         if (event.detail.status === "failed") {
           alert(
-            "HP ini mungkin tidak mendukung WebXR/ARCore, atau file tidak dijalankan via HTTPS."
+            "Gagal masuk mode AR. Pastikan:\n1. Link menggunakan HTTPS (bukan http/file)\n2. HP mendukung ARCore/ARKit."
           );
         }
       });
