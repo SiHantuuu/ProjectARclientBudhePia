@@ -280,6 +280,10 @@
           t: "Liferaft",
           d: "Rakit penolong yang sudah mengembang di air.",
         },
+        tali: {
+          t: "Tali Penahan (Bowsing Line)",
+          d: "Tali ini menahan rakit agar tetap rapat dengan kapal untuk evakuasi.",
+        },
       };
 
       // KONFIGURASI SCENE
@@ -290,8 +294,8 @@
           rot: 0,
           containerId: "scene-container-1",
           hitboxes: [
-            { pos: "4.813 2.55 3.13", key: "phone" },
-            { pos: "1.03 1.99 5.03", key: "alarm" },
+            { pos: "4.13 2.69 3.92", key: "phone" },
+            { pos: "1.80 2.00 5.25", key: "alarm" },
           ],
         },
         2: {
@@ -300,10 +304,10 @@
           rot: 180,
           containerId: "scene-container-2",
           hitboxes: [
-            { pos: "-9.27 7.93 -8.54", key: "raft" },
-            { pos: "-5.35 7.37 -2.10", key: "jacket" },
-            { pos: "-7.38 11.92 -5.27", key: "muster" },
-            { pos: "-10.30 6.65 -2.32", key: "mes" },
+            { pos: "-9.44 8.17 -7.50", key: "raft" },
+            { pos: "-5.21 8.08 -1.47", key: "jacket" },
+            { pos: "-7.56 11.28 -4.72", key: "muster" },
+            { pos: "-10.30 7.55 -2.92", key: "mes" },
           ],
         },
         3: {
@@ -313,7 +317,18 @@
           containerId: "scene-container-3",
           hitboxes: [
             { pos: "-10.30 6.84 -2.63", key: "chute" },
-            { pos: "-15.35 1.24 -9.54", key: "raft" },
+            { pos: "-15.35 1.24 -9.54", key: "raft", size: "3 2 3" },
+
+            // --- UPDATED TALI POSITION DARI INSPECTOR BARU ---
+            {
+              // Position dari screenshot terakhir
+              pos: "-11.782 7.739 -2.710",
+              key: "tali",
+              // Scale dari screenshot terakhir
+              size: "0.100 1.610 0.100",
+              // Rotation dari screenshot terakhir
+              rot: "1.562 2.032 120.916",
+            },
           ],
         },
       };
@@ -357,21 +372,26 @@
         hitboxContainer.innerHTML = "";
 
         config.hitboxes.forEach((item) => {
-          createHitbox(item.pos, item.key);
+          createHitbox(item.pos, item.key, item.size, item.rot);
         });
       }
 
-      function createHitbox(posStr, key) {
+      function createHitbox(posStr, key, size = "0.5 0.5 0.5", rot = "0 0 0") {
         const el = document.createElement("a-entity");
-        el.setAttribute(
-          "geometry",
-          "primitive: box; width: 0.5; height: 0.5; depth: 0.5"
-        );
-        // Merah transparan untuk debug
+        el.setAttribute("geometry", "primitive: box");
+
+        // Set Ukuran (Scale)
+        el.setAttribute("scale", size);
+
+        // Set Rotasi
+        el.setAttribute("rotation", rot);
+
+        // Set Warna: CYAN (Biru Muda) agar kontras
         el.setAttribute(
           "material",
-          "color: red; opacity: 0.3; transparent: true"
+          "color: cyan; opacity: 0.4; transparent: true; depthTest: false"
         );
+
         el.setAttribute("position", posStr);
         el.setAttribute("class", "clickable");
         el.dataset.key = key;
@@ -463,7 +483,8 @@
       window.closePopup = function () {
         popup.style.display = "none";
         isPopupOpen = false;
-        document.querySelector("a-scene").canvas.requestPointerLock();
+        const sceneEl = document.querySelector("a-scene");
+        if (sceneEl.canvas) sceneEl.canvas.requestPointerLock();
       };
 
       const startBtn = document.getElementById("start-btn");
@@ -485,18 +506,22 @@
       const rig = document.getElementById("rig");
       const cam = document.getElementById("camera");
       let joyData = null;
-      const joy = nipplejs.create({
-        zone: document.getElementById("joystick-zone"),
-        mode: "static",
-        position: { right: "50%", bottom: "50%" },
-        color: "white",
-      });
-      joy.on("move", (e, data) => {
-        joyData = data.vector;
-      });
-      joy.on("end", () => {
-        joyData = null;
-      });
+
+      const joyZone = document.getElementById("joystick-zone");
+      if (joyZone) {
+        const joy = nipplejs.create({
+          zone: joyZone,
+          mode: "static",
+          position: { right: "50%", bottom: "50%" },
+          color: "white",
+        });
+        joy.on("move", (e, data) => {
+          joyData = data.vector;
+        });
+        joy.on("end", () => {
+          joyData = null;
+        });
+      }
 
       const direction = new THREE.Vector3();
       const side = new THREE.Vector3();
