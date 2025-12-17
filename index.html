@@ -6,330 +6,279 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>Museum Joystick - Render Fix</title>
-
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.1/nipplejs.min.js"></script>
-
+    <title>Pilih Pengalaman - VR atau AR</title>
     <style>
-      body {
+      * {
         margin: 0;
-        overflow: hidden;
-        user-select: none;
-        -webkit-user-select: none;
-        font-family: "Segoe UI", sans-serif;
+        padding: 0;
+        box-sizing: border-box;
       }
 
-      /* LOADING SCREEN */
-      #loading-screen {
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+      }
+
+      .container {
+        text-align: center;
+        width: 90%;
+        max-width: 600px;
+        animation: fadeIn 0.8s ease-in;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      h1 {
+        color: white;
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1em;
+        margin-bottom: 40px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+      }
+
+      .options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+
+      @media (max-width: 600px) {
+        .options {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 2em;
+        }
+      }
+
+      .option-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .option-card::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+          45deg,
+          transparent,
+          rgba(255, 255, 255, 0.3),
+          transparent
+        );
+        transform: rotate(45deg);
+        animation: shine 3s infinite;
+      }
+
+      @keyframes shine {
+        0% {
+          transform: translateX(-100%) translateY(-100%) rotate(45deg);
+        }
+        100% {
+          transform: translateX(100%) translateY(100%) rotate(45deg);
+        }
+      }
+
+      .option-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      }
+
+      .option-card.vr:hover {
+        border: 3px solid #00d2ff;
+      }
+
+      .option-card.ar:hover {
+        border: 3px solid #ff6b6b;
+      }
+
+      .icon {
+        font-size: 3.5em;
+        margin-bottom: 15px;
+      }
+
+      .option-title {
+        font-size: 1.8em;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+
+      .vr .option-title {
+        color: #00d2ff;
+      }
+
+      .ar .option-title {
+        color: #ff6b6b;
+      }
+
+      .option-desc {
+        color: #666;
+        font-size: 0.95em;
+        line-height: 1.5;
+        margin-bottom: 15px;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 12px 30px;
+        border: none;
+        border-radius: 50px;
+        font-size: 1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .btn-vr {
+        background: linear-gradient(135deg, #00d2ff, #0099cc);
+        color: white;
+      }
+
+      .btn-vr:hover {
+        background: linear-gradient(135deg, #0099cc, #006b99);
+        transform: scale(1.05);
+      }
+
+      .btn-ar {
+        background: linear-gradient(135deg, #ff6b6b, #ff4444);
+        color: white;
+      }
+
+      .btn-ar:hover {
+        background: linear-gradient(135deg, #ff4444, #cc0000);
+        transform: scale(1.05);
+      }
+
+      .footer {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9em;
+        margin-top: 30px;
+      }
+
+      .background-animation {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: #000;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        transition: opacity 1s ease-out;
-      }
-
-      .loader-text {
-        color: #00d2ff;
-        font-size: 20px;
-        margin-bottom: 15px;
-        font-weight: bold;
-        letter-spacing: 1px;
-      }
-
-      .progress-container {
-        width: 70%;
-        max-width: 300px;
-        height: 8px;
-        background: #333;
-        border-radius: 4px;
+        z-index: -1;
         overflow: hidden;
       }
 
-      .progress-bar {
-        width: 0%;
-        height: 100%;
-        background: #00d2ff;
-        transition: width 0.3s ease;
-      }
-
-      /* JOYSTICK & UI */
-      #joystick-zone {
+      .bubble {
         position: absolute;
-        bottom: 20px;
-        left: 20px;
-        width: 150px;
-        height: 150px;
-        z-index: 999;
-        touch-action: none;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 20s infinite ease-in-out;
       }
 
-      #instruction {
-        position: fixed;
-        top: 10px;
-        width: 100%;
-        text-align: center;
-        color: white;
-        pointer-events: none;
-        text-shadow: 1px 1px 2px black;
-        font-size: 14px;
-        z-index: 900;
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px) translateX(0px);
+        }
+        50% {
+          transform: translateY(-50px) translateX(30px);
+        }
       }
 
-      #info-overlay {
-        display: none;
-        position: fixed;
-        top: 50%;
+      .bubble1 {
+        width: 100px;
+        height: 100px;
+        top: 10%;
+        left: 5%;
+        animation-delay: 0s;
+      }
+
+      .bubble2 {
+        width: 80px;
+        height: 80px;
+        top: 60%;
+        right: 10%;
+        animation-delay: 5s;
+      }
+
+      .bubble3 {
+        width: 120px;
+        height: 120px;
+        bottom: 10%;
         left: 50%;
-        transform: translate(-50%, -50%);
-        width: 80%;
-        max-width: 350px;
-        background: rgba(0, 0, 0, 0.9);
-        color: white;
-        padding: 20px;
-        border-radius: 15px;
-        border: 2px solid #00d2ff;
-        z-index: 1000;
-        text-align: center;
-      }
-      .close-btn {
-        background: #ff4444;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        margin-top: 15px;
-        border-radius: 50px;
-        font-weight: bold;
-        cursor: pointer;
+        animation-delay: 10s;
       }
     </style>
   </head>
   <body>
-    <div id="loading-screen">
-      <div class="loader-text">
-        MEMUAT PAMERAN... <span id="percent-text">0%</span>
-      </div>
-      <div class="progress-container">
-        <div class="progress-bar" id="progress-bar"></div>
-      </div>
-      <p style="color: #666; font-size: 12px; margin-top: 10px">
-        Sedang merender objek 3D...
-      </p>
+    <div class="background-animation">
+      <div class="bubble bubble1"></div>
+      <div class="bubble bubble2"></div>
+      <div class="bubble bubble3"></div>
     </div>
 
-    <div id="instruction">🕹️ KIRI: Jalan | 👋 KANAN: Tengok | 👆 TAP: Info</div>
-    <div id="joystick-zone"></div>
+    <div class="container">
+      <h1>🎮 Pilih Pengalaman Anda</h1>
+      <p class="subtitle">Jelajahi dunia virtual atau augmented reality</p>
 
-    <div id="info-overlay">
-      <h2 id="info-title" style="color: #00d2ff; margin-top: 0">Judul</h2>
-      <p id="info-desc">Deskripsi...</p>
-      <button class="close-btn" onclick="tutupInfo()">TUTUP</button>
+      <div class="options">
+        <!-- VR Option -->
+        <div class="option-card vr">
+          <div class="icon">🥽</div>
+          <div class="option-title">Virtual Reality</div>
+          <p class="option-desc">
+            Rasakan pengalaman immersive dengan VR. Jelajahi lingkungan 3D yang menakjubkan dengan kontrol penuh.
+          </p>
+          <a href="prototype.html" class="btn btn-vr">Masuk VR →</a>
+        </div>
+
+        <!-- AR Option -->
+        <div class="option-card ar">
+          <div class="icon">📱</div>
+          <div class="option-title">Augmented Reality</div>
+          <p class="option-desc">
+            Lihat objek 3D di dunia nyata Anda. Augmented reality membawa virtual ke realitas.
+          </p>
+          <a href="AR.html" class="btn btn-ar">Masuk AR →</a>
+        </div>
+      </div>
+
+      <div class="footer">
+        <p>💡 Gunakan perangkat terbaru untuk pengalaman terbaik</p>
+      </div>
     </div>
-
-    <a-scene
-      id="main-scene"
-      vr-mode-ui="enabled: false"
-      cursor="rayOrigin: mouse"
-      raycaster="objects: .clickable"
-    >
-      <a-assets>
-        <a-asset-item id="model-bebek" src="Hitem3d.glb"></a-asset-item>
-      </a-assets>
-
-      <a-entity
-        environment="preset: contact; skyType: atmosphere; groundColor: #333; grid: none"
-      ></a-entity>
-
-      <a-entity id="rig" position="0 0 5" rotation="0 0 0">
-        <a-entity
-          id="camera"
-          camera
-          look-controls="touchEnabled: true"
-          position="0 1.6 0"
-        ></a-entity>
-      </a-entity>
-    </a-scene>
-
-    <script>
-      /* --- 1. LOGIKA LOADING (YANG DIPERBAIKI) --- */
-      const loadingScreen = document.getElementById("loading-screen");
-      const progressBar = document.getElementById("progress-bar");
-      const percentText = document.getElementById("percent-text");
-
-      // Kita butuh 2 syarat untuk selesai:
-      // 1. Download file selesai (oleh LoadingManager)
-      // 2. Render 10 model selesai (oleh Counter manual)
-
-      let isDownloadComplete = false;
-      let renderedCount = 0;
-      const totalItemsToRender = 10;
-
-      // A. Monitor Download File
-      THREE.DefaultLoadingManager.onProgress = function (
-        url,
-        itemsLoaded,
-        itemsTotal
-      ) {
-        // Kita batasi progress bar download maksimal 80%, sisa 20% untuk proses render
-        const progress = (itemsLoaded / itemsTotal) * 80;
-        updateBar(progress);
-      };
-
-      THREE.DefaultLoadingManager.onLoad = function () {
-        console.log("Download Selesai. Menunggu Render...");
-        isDownloadComplete = true;
-        checkAllDone(); // Cek apakah render juga sudah selesai?
-      };
-
-      // B. Fungsi Update Bar
-      function updateBar(percent) {
-        const round = Math.round(percent);
-        progressBar.style.width = round + "%";
-        percentText.innerText = round + "%";
-      }
-
-      // C. Fungsi Cek Final
-      function checkAllDone() {
-        // Hitung persentase render (dari 80% ke 100%)
-        const renderProgress = (renderedCount / totalItemsToRender) * 20;
-        const totalProgress = 80 + renderProgress; // 80 basis download + progres render
-
-        // Jika file sudah didownload, kita update bar berdasarkan jumlah render
-        if (isDownloadComplete) {
-          updateBar(totalProgress);
-        }
-
-        // Syarat HILANGKAN OVERLAY: Download beres DAN 10 model sudah ter-load
-        if (isDownloadComplete && renderedCount >= totalItemsToRender) {
-          console.log("SEMUA SIAP! Membuka pameran...");
-          setTimeout(() => {
-            loadingScreen.style.opacity = "0";
-            setTimeout(() => {
-              loadingScreen.style.display = "none";
-            }, 1000);
-          }, 500);
-        }
-      }
-
-      /* --- 2. GENERATE ITEM + DETEKSI RENDER --- */
-      const scene = document.getElementById("main-scene");
-
-      function generatePameran() {
-        const jumlahItem = totalItemsToRender; // Harus sama dengan 10
-
-        for (let i = 0; i < jumlahItem; i++) {
-          const container = document.createElement("a-entity");
-          const randomX = Math.random() * 30 - 15;
-          const randomZ = Math.random() * 30 - 15;
-          container.setAttribute("position", `${randomX} 0 ${randomZ}`);
-
-          const model = document.createElement("a-entity");
-          model.setAttribute("gltf-model", "#model-bebek");
-          model.setAttribute("class", "clickable");
-          model.setAttribute("position", "0 0.5 0");
-          model.setAttribute(
-            "animation",
-            "property: rotation; to: 0 360 0; loop: true; dur: 8000; easing: linear"
-          );
-          model.setAttribute(
-            "onclick",
-            `bukaInfo('Koleksi #${i + 1}', 'Item ke-${i + 1}')`
-          );
-
-          // --- INI KUNCI PERBAIKANNYA ---
-          // Setiap kali satu model selesai dirender, event ini jalan
-          model.addEventListener("model-loaded", function () {
-            renderedCount++;
-            console.log(`Model ke-${renderedCount} selesai dirender.`);
-            checkAllDone(); // Cek apakah sudah semua?
-          });
-          // ------------------------------
-
-          const alas = document.createElement("a-cylinder");
-          alas.setAttribute("radius", "1");
-          alas.setAttribute("height", "0.2");
-          alas.setAttribute("color", "#444");
-          alas.setAttribute("position", "0 0.1 0");
-
-          container.appendChild(model);
-          container.appendChild(alas);
-          scene.appendChild(container);
-        }
-      }
-
-      // Jalankan generate
-      generatePameran();
-
-      /* --- 3. JOYSTICK & INTERAKSI (Tetap Sama) --- */
-      const joystickZone = document.getElementById("joystick-zone");
-      const manager = nipplejs.create({
-        zone: joystickZone,
-        mode: "static",
-        position: { left: "50%", top: "50%" },
-        color: "white",
-        size: 100,
-      });
-
-      let moveData = { x: 0, y: 0 };
-      let isMoving = false;
-      const speed = 0.1;
-      const rig = document.getElementById("rig");
-      const camera = document.getElementById("camera");
-
-      manager.on("move", function (evt, data) {
-        if (data && data.vector) {
-          moveData.x = data.vector.x;
-          moveData.y = data.vector.y;
-          isMoving = true;
-        }
-      });
-      manager.on("end", function () {
-        isMoving = false;
-        moveData = { x: 0, y: 0 };
-      });
-
-      function gameLoop() {
-        if (isMoving) {
-          const rotation = camera.getAttribute("rotation");
-          const angleRad = rotation.y * (Math.PI / 180);
-          const dx = Math.sin(angleRad) * -moveData.y * speed;
-          const dz = Math.cos(angleRad) * -moveData.y * speed;
-          const sx = Math.cos(angleRad) * moveData.x * speed;
-          const sz = Math.sin(angleRad) * -moveData.x * speed;
-          rig.object3D.position.x += dx + sx;
-          rig.object3D.position.z += dz + sz;
-        }
-        requestAnimationFrame(gameLoop);
-      }
-      gameLoop();
-
-      const infoOverlay = document.getElementById("info-overlay");
-      const titleEl = document.getElementById("info-title");
-      const descEl = document.getElementById("info-desc");
-
-      window.bukaInfo = function (judul, deskripsi) {
-        titleEl.innerText = judul;
-        descEl.innerText = deskripsi;
-        infoOverlay.style.display = "block";
-      };
-      window.tutupInfo = function () {
-        infoOverlay.style.display = "none";
-      };
-      joystickZone.addEventListener(
-        "touchmove",
-        function (e) {
-          e.stopPropagation();
-        },
-        false
-      );
-    </script>
   </body>
 </html>
